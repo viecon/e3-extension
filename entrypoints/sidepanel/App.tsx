@@ -28,8 +28,21 @@ export default function App() {
   const checkAuth = async () => {
     try {
       const state = await sendMessage('getAuthState', undefined);
-      setLoggedIn(state.loggedIn);
-      setFullname(state.fullname ?? '');
+      if (state.loggedIn) {
+        setLoggedIn(true);
+        setFullname(state.fullname ?? '');
+        return;
+      }
+
+      // Try to detect session from E3 cookies
+      const session = await sendMessage('checkSession', undefined);
+      if (session.loggedIn) {
+        setLoggedIn(true);
+        setFullname(session.fullname ?? '');
+        return;
+      }
+
+      setLoggedIn(false);
     } catch {
       setLoggedIn(false);
     }

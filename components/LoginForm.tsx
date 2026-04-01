@@ -75,12 +75,12 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       {useToken ? (
         <>
           <div className="text-xs text-gray-500 bg-gray-50 rounded-lg p-3">
-            <p className="font-medium mb-1">取得 Token 方式：</p>
+            <p className="font-medium mb-1">Token 來源（任選一）：</p>
             <ol className="list-decimal ml-4 space-y-0.5">
-              <li>登入 E3 後到個人設定</li>
-              <li>安全金鑰 → 建立 Token</li>
-              <li>複製貼上到下方</li>
+              <li>CLI 已登入？打開 <code className="bg-gray-200 px-1 rounded">~/.e3rc.json</code> 複製 token</li>
+              <li>或到 E3 → 個人設定 → 安全金鑰 → 建立 Token</li>
             </ol>
+            <p className="mt-1.5 text-e3-accent font-medium">推薦使用 Token，功能最完整（含下載、成績）</p>
           </div>
           <input
             type="password"
