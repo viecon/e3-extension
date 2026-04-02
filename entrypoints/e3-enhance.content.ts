@@ -488,141 +488,48 @@ async function addDeadlineBanner() {
  * 注入 E3 網站 Dark Mode CSS（跟系統 dark mode 連動）
  */
 function injectDarkMode() {
+  // Use CSS filter invert approach — much more reliable than manual overrides.
+  // Inverts the entire page then re-inverts images/videos/icons so they look normal.
   const style = document.createElement('style');
   style.id = 'e3-dark-mode';
   style.textContent = `
 @media (prefers-color-scheme: dark) {
-  /* Base */
-  body, #page, #page-wrapper, .pagelayout-standard, .pagelayout-course,
-  .pagelayout-mydashboard, .pagelayout-admin {
-    background-color: #1a1a2e !important;
-    color: #e0e0e0 !important;
+  html {
+    filter: invert(90%) hue-rotate(180deg);
+    background: #111 !important;
   }
 
-  /* Header / Navbar */
-  .navbar, nav.navbar, #page-header, .page-header-headings,
-  header#page-header {
-    background-color: #16213e !important;
-    color: #e0e0e0 !important;
-  }
-  .navbar a, .navbar .nav-link { color: #b0c4de !important; }
-
-  /* Sidebar / Drawer */
-  [data-region="drawer"], .drawer, .drawer-left, .drawer-right,
-  #nav-drawer, .course-index, .courseindex {
-    background-color: #0f3460 !important;
-    color: #e0e0e0 !important;
-  }
-  .course-index a, .courseindex a, #nav-drawer a,
-  .list-group-item { color: #b0c4de !important; background-color: transparent !important; }
-
-  /* Cards & Content blocks */
-  .card, .card-body, .card-header, .card-footer,
-  .block, .block_myoverview, .course-content,
-  .activity-item, .section, #region-main,
-  .generaltable, .submissionstatustable,
-  .well, .alert-info, .course-section,
-  .activity-basis {
-    background-color: #16213e !important;
-    color: #e0e0e0 !important;
-    border-color: #2a3a5c !important;
+  /* Re-invert media so images/videos look normal */
+  img, video, svg image, [style*="background-image"],
+  .userpicture, .activityiconcontainer img,
+  .course-info-container, canvas,
+  iframe, embed, object {
+    filter: invert(100%) hue-rotate(180deg) !important;
   }
 
-  /* Course sections */
-  .section .activity, .section .label,
-  .course-content .section, .topics .section,
-  .activity-wrapper, .activity-info {
-    background-color: #1a1a2e !important;
-    border-color: #2a3a5c !important;
+  /* Fix E3 logo and header images */
+  .navbar img, header img, #page-header img {
+    filter: invert(100%) hue-rotate(180deg) !important;
   }
 
-  /* Text & Links */
-  h1, h2, h3, h4, h5, h6, .page-header-headings h1 {
-    color: #e8e8e8 !important;
-  }
-  a, a:hover { color: #64b5f6 !important; }
-  .text-muted, .text-secondary, .dimmed_text { color: #9e9e9e !important; }
-  p, span, div, li, td, th, label, .helptooltip { color: #d0d0d0 !important; }
+  /* Tone down pure blacks that become pure whites */
+  body { background-color: #eee !important; }
 
-  /* Tables */
-  table, .table, .generaltable {
-    border-color: #2a3a5c !important;
-  }
-  .table th, .generaltable th {
-    background-color: #0f3460 !important;
-    color: #e0e0e0 !important;
-    border-color: #2a3a5c !important;
-  }
-  .table td, .generaltable td {
-    border-color: #2a3a5c !important;
-  }
-  .table-striped tbody tr:nth-of-type(odd) {
-    background-color: #1a2744 !important;
+  /* Fix shadows that look weird when inverted */
+  *, *::before, *::after {
+    box-shadow: none !important;
+    text-shadow: none !important;
   }
 
-  /* Forms & Inputs */
-  input, textarea, select, .form-control, .custom-select {
-    background-color: #1a2744 !important;
-    color: #e0e0e0 !important;
-    border-color: #2a3a5c !important;
+  /* Our own injected elements — re-invert so they use their own dark colors */
+  #e3-quick-panel, .e3-panel-item, .e3-panel-header, .e3-panel-loading, .e3-panel-empty {
+    filter: invert(100%) hue-rotate(180deg) !important;
   }
-
-  /* Buttons */
-  .btn-primary { background-color: #1565c0 !important; border-color: #1565c0 !important; }
-  .btn-secondary { background-color: #37474f !important; border-color: #37474f !important; color: #e0e0e0 !important; }
-  .btn-outline-secondary { border-color: #546e7a !important; color: #b0bec5 !important; }
-
-  /* Footer */
-  #page-footer, footer, .bg-white {
-    background-color: #16213e !important;
-    color: #9e9e9e !important;
-  }
-
-  /* Dropdowns & Popups */
-  .dropdown-menu, .popover, .tooltip-inner {
-    background-color: #1a2744 !important;
-    border-color: #2a3a5c !important;
-    color: #e0e0e0 !important;
-  }
-  .dropdown-item { color: #e0e0e0 !important; }
-  .dropdown-item:hover { background-color: #0f3460 !important; }
-
-  /* Calendar */
-  .calendarwrapper, .maincalendar, .calendar-controls {
-    background-color: #16213e !important;
-  }
-
-  /* Breadcrumb */
-  .breadcrumb, .breadcrumb-item a {
-    background-color: transparent !important;
-    color: #9e9e9e !important;
-  }
-
-  /* Modal */
-  .modal-content {
-    background-color: #16213e !important;
-    border-color: #2a3a5c !important;
-    color: #e0e0e0 !important;
-  }
-  .modal-header, .modal-footer { border-color: #2a3a5c !important; }
-
-  /* Override bright backgrounds */
-  .bg-white, .bg-light { background-color: #16213e !important; }
-  .border-bottom { border-color: #2a3a5c !important; }
 
   /* Scrollbar */
   ::-webkit-scrollbar { width: 8px; }
-  ::-webkit-scrollbar-track { background: #1a1a2e; }
-  ::-webkit-scrollbar-thumb { background: #2a3a5c; border-radius: 4px; }
-  ::-webkit-scrollbar-thumb:hover { background: #3a4a6c; }
-
-  /* Images — don't invert, but reduce brightness slightly */
-  img { opacity: 0.9; }
-
-  /* Our own injected elements */
-  .e3-panel-item { background-color: #1a2744 !important; }
-  .e3-panel-item:hover { background-color: #0f3460 !important; }
-  .e3-panel-header { background-color: #16213e !important; border-color: #4a90d9 !important; }
+  ::-webkit-scrollbar-track { background: #222; }
+  ::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
 }
 `;
   document.head.appendChild(style);
