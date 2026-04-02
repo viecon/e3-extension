@@ -12,10 +12,13 @@ export default defineContentScript({
     // 1. 自動擷取 sesskey 並等待存入 (後續功能需要 auth)
     await extractAndSaveSession();
 
-    // 2. 浮動按鈕
+    // 2. Command Palette (Ctrl+K)
+    initCommandPalette();
+
+    // 3. 浮動按鈕
     addFloatingButton();
 
-    // 3. 課程頁面增強
+    // 4. 課程頁面增強
     if (window.location.pathname.includes('/course/view.php')) {
       const courseId = new URLSearchParams(window.location.search).get('id');
       if (courseId) {
@@ -24,7 +27,7 @@ export default defineContentScript({
       }
     }
 
-    // 4. 作業頁面增強
+    // 5. 作業頁面增強
     if (window.location.pathname.includes('/mod/assign/view.php')) {
       enhanceAssignmentPage();
     }
@@ -483,6 +486,294 @@ async function addDeadlineBanner() {
   } catch {
     // Extension might not have auth yet
   }
+}
+
+/**
+ * Command Palette — Ctrl+K 快速導航
+ */
+function initCommandPalette() {
+  let overlay: HTMLDivElement | null = null;
+
+  const STYLE = `
+    .e3-cmd-overlay {
+      position: fixed; inset: 0; z-index: 99999;
+      background: rgba(0,0,0,0.5); backdrop-filter: blur(2px);
+      display: flex; justify-content: center; padding-top: 15vh;
+      animation: e3CmdFadeIn 0.12s ease-out;
+    }
+    .e3-cmd-box {
+      width: 560px; max-height: 480px; background: #1e293b;
+      border-radius: 12px; box-shadow: 0 25px 60px rgba(0,0,0,0.4);
+      overflow: hidden; display: flex; flex-direction: column;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      animation: e3CmdSlideIn 0.15s ease-out;
+    }
+    .e3-cmd-input-wrap {
+      padding: 16px; border-bottom: 1px solid #334155;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .e3-cmd-input-wrap svg { width: 18px; height: 18px; color: #64748b; flex-shrink: 0; }
+    .e3-cmd-input {
+      flex: 1; background: none; border: none; outline: none;
+      font-size: 15px; color: #f1f5f9;
+    }
+    .e3-cmd-input::placeholder { color: #64748b; }
+    .e3-cmd-kbd {
+      font-size: 11px; color: #64748b; background: #334155;
+      padding: 2px 6px; border-radius: 4px; font-family: monospace;
+    }
+    .e3-cmd-results {
+      overflow-y: auto; flex: 1; padding: 8px;
+    }
+    .e3-cmd-group {
+      padding: 4px 8px; font-size: 11px; font-weight: 600;
+      color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .e3-cmd-item {
+      padding: 10px 12px; border-radius: 8px; cursor: pointer;
+      display: flex; align-items: center; gap: 10px;
+      color: #e2e8f0; font-size: 14px; transition: background 0.1s;
+    }
+    .e3-cmd-item:hover, .e3-cmd-item.active { background: #334155; }
+    .e3-cmd-item-icon {
+      width: 28px; height: 28px; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; flex-shrink: 0;
+    }
+    .e3-cmd-item-text { flex: 1; overflow: hidden; }
+    .e3-cmd-item-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .e3-cmd-item-sub { font-size: 11px; color: #64748b; margin-top: 1px; }
+    .e3-cmd-empty { padding: 32px; text-align: center; color: #64748b; font-size: 14px; }
+    .e3-cmd-footer {
+      padding: 8px 16px; border-top: 1px solid #334155;
+      display: flex; gap: 12px; font-size: 11px; color: #64748b;
+    }
+    @keyframes e3CmdFadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes e3CmdSlideIn { from { transform: translateY(-10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  `;
+
+  interface CmdItem {
+    title: string;
+    sub?: string;
+    icon: string;
+    iconBg: string;
+    action: () => void;
+  }
+
+  let allItems: CmdItem[] = [];
+  let activeIdx = 0;
+
+  // Build item list from API
+  async function loadItems(): Promise<CmdItem[]> {
+    const items: CmdItem[] = [];
+
+    // Static navigation items
+    items.push(
+      { title: 'E3 首頁', sub: '焦點綜覽', icon: 'H', iconBg: '#3b82f6', action: () => nav('/my/') },
+      { title: '行事曆', sub: 'Calendar', icon: 'C', iconBg: '#8b5cf6', action: () => nav('/calendar/view.php') },
+      { title: '成績總覽', sub: 'Grades', icon: 'G', iconBg: '#10b981', action: () => nav('/grade/report/overview/index.php') },
+    );
+
+    // Load courses + assignments
+    try {
+      const [courseResult, assignResult] = await Promise.all([
+        sendMessage('getCourses', undefined),
+        sendMessage('getPendingAssignments', undefined),
+      ]);
+
+      for (const c of courseResult.courses) {
+        items.push({
+          title: c.fullname,
+          sub: c.shortname,
+          icon: 'C',
+          iconBg: '#0ea5e9',
+          action: () => nav(`/course/view.php?id=${c.id}`),
+        });
+      }
+
+      for (const a of assignResult.assignments) {
+        const due = a.duedate > 0 ? new Date(a.duedate * 1000).toLocaleDateString('zh-TW', { month: 'short', day: 'numeric' }) : '';
+        items.push({
+          title: a.name,
+          sub: `${a.courseShortname}${due ? ' · ' + due : ''}`,
+          icon: 'A',
+          iconBg: a.isOverdue ? '#ef4444' : '#f59e0b',
+          action: () => nav(`/mod/assign/view.php?id=${a.cmid}`),
+        });
+      }
+    } catch {
+      // No auth
+    }
+
+    return items;
+  }
+
+  function nav(path: string) {
+    window.location.href = `${BASE_URL}${path}`;
+  }
+
+  function open() {
+    if (overlay) return;
+
+    const styleEl = document.createElement('style');
+    styleEl.textContent = STYLE;
+    document.head.appendChild(styleEl);
+
+    overlay = document.createElement('div');
+    overlay.className = 'e3-cmd-overlay';
+
+    const box = document.createElement('div');
+    box.className = 'e3-cmd-box';
+
+    // Input
+    const inputWrap = document.createElement('div');
+    inputWrap.className = 'e3-cmd-input-wrap';
+    inputWrap.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>';
+
+    const input = document.createElement('input');
+    input.className = 'e3-cmd-input';
+    input.placeholder = '搜尋課程、作業、頁面...';
+    input.autofocus = true;
+
+    const kbd = document.createElement('span');
+    kbd.className = 'e3-cmd-kbd';
+    kbd.textContent = 'ESC';
+
+    inputWrap.append(input, kbd);
+
+    // Results
+    const results = document.createElement('div');
+    results.className = 'e3-cmd-results';
+    results.innerHTML = '<div class="e3-cmd-empty">載入中...</div>';
+
+    // Footer
+    const footer = document.createElement('div');
+    footer.className = 'e3-cmd-footer';
+    footer.innerHTML = '<span>↑↓ 移動</span><span>Enter 開啟</span><span>Esc 關閉</span>';
+
+    box.append(inputWrap, results, footer);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    input.focus();
+
+    // Load items
+    loadItems().then(items => {
+      allItems = items;
+      render(results, items);
+    });
+
+    // Search
+    input.addEventListener('input', () => {
+      const q = input.value.toLowerCase().trim();
+      const filtered = q
+        ? allItems.filter(item =>
+            item.title.toLowerCase().includes(q) ||
+            (item.sub?.toLowerCase().includes(q) ?? false))
+        : allItems;
+      activeIdx = 0;
+      render(results, filtered);
+    });
+
+    // Keyboard nav
+    input.addEventListener('keydown', (e) => {
+      const visible = results.querySelectorAll('.e3-cmd-item');
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        activeIdx = Math.min(activeIdx + 1, visible.length - 1);
+        updateActive(results);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        activeIdx = Math.max(activeIdx - 1, 0);
+        updateActive(results);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        const active = visible[activeIdx] as HTMLElement | undefined;
+        active?.click();
+      } else if (e.key === 'Escape') {
+        close();
+      }
+    });
+  }
+
+  function render(container: HTMLElement, items: CmdItem[]) {
+    container.textContent = '';
+    if (items.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'e3-cmd-empty';
+      empty.textContent = '找不到結果';
+      container.appendChild(empty);
+      return;
+    }
+
+    // Group: navigation, courses, assignments
+    const groups: Record<string, CmdItem[]> = {};
+    for (const item of items) {
+      const group = item.icon === 'A' ? '作業' : item.icon === 'C' && item.sub !== 'Calendar' ? '課程' : '快速導航';
+      (groups[group] ??= []).push(item);
+    }
+
+    for (const [label, groupItems] of Object.entries(groups)) {
+      const groupEl = document.createElement('div');
+      groupEl.className = 'e3-cmd-group';
+      groupEl.textContent = label;
+      container.appendChild(groupEl);
+
+      for (const item of groupItems) {
+        const el = document.createElement('div');
+        el.className = 'e3-cmd-item';
+
+        const icon = document.createElement('div');
+        icon.className = 'e3-cmd-item-icon';
+        icon.style.background = item.iconBg;
+        icon.style.color = 'white';
+        icon.textContent = item.icon;
+
+        const text = document.createElement('div');
+        text.className = 'e3-cmd-item-text';
+
+        const title = document.createElement('div');
+        title.className = 'e3-cmd-item-title';
+        title.textContent = item.title;
+
+        text.appendChild(title);
+        if (item.sub) {
+          const sub = document.createElement('div');
+          sub.className = 'e3-cmd-item-sub';
+          sub.textContent = item.sub;
+          text.appendChild(sub);
+        }
+
+        el.append(icon, text);
+        el.addEventListener('click', () => { close(); item.action(); });
+        container.appendChild(el);
+      }
+    }
+
+    activeIdx = 0;
+    updateActive(container);
+  }
+
+  function updateActive(container: HTMLElement) {
+    const items = container.querySelectorAll('.e3-cmd-item');
+    items.forEach((el, i) => el.classList.toggle('active', i === activeIdx));
+    items[activeIdx]?.scrollIntoView({ block: 'nearest' });
+  }
+
+  function close() {
+    overlay?.remove();
+    overlay = null;
+  }
+
+  // Listen for Ctrl+K
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      e.preventDefault();
+      e.stopPropagation();
+      if (overlay) close(); else open();
+    }
+  });
 }
 
 /**
