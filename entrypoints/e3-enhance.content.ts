@@ -256,37 +256,55 @@ async function addDeadlineBanner() {
     `;
     document.head.appendChild(style);
 
-    let html = `
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <span style="font-size:14px;font-weight:600;color:#1e3a5f">即將截止的作業</span>
-        <button id="e3-banner-close" style="background:none;border:none;cursor:pointer;font-size:18px;color:#999;padding:0 4px">✕</button>
-      </div>
-    `;
+    // Build banner with DOM API (no innerHTML with user data — XSS prevention)
+    const header = document.createElement('div');
+    header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:10px';
+
+    const title = document.createElement('span');
+    title.style.cssText = 'font-size:14px;font-weight:600;color:#1e3a5f';
+    title.textContent = '即將截止的作業';
+
+    const closeBtn = document.createElement('button');
+    closeBtn.style.cssText = 'background:none;border:none;cursor:pointer;font-size:18px;color:#999;padding:0 4px';
+    closeBtn.textContent = '\u2715';
+    closeBtn.addEventListener('click', () => banner.remove());
+
+    header.append(title, closeBtn);
+    banner.appendChild(header);
 
     for (const a of urgent) {
       const hoursLeft = Math.max(0, Math.round((a.duedate - now) / 3600));
       const color = hoursLeft < 24 ? '#e74c3c' : '#f39c12';
       const timeText = a.isOverdue ? '已逾期' : hoursLeft < 24 ? `剩 ${hoursLeft} 小時` : `剩 ${Math.round(hoursLeft / 24)} 天`;
 
-      html += `
-        <div style="padding:8px 0;border-top:1px solid #f0f0f0">
-          <div style="display:flex;justify-content:space-between;align-items:start">
-            <div style="min-width:0">
-              <div style="font-size:13px;font-weight:500;color:#333;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.name}</div>
-              <div style="font-size:11px;color:#999;margin-top:2px">${a.courseShortname}</div>
-            </div>
-            <span style="font-size:11px;font-weight:600;color:${color};white-space:nowrap;margin-left:8px">${timeText}</span>
-          </div>
-        </div>
-      `;
+      const row = document.createElement('div');
+      row.style.cssText = 'padding:8px 0;border-top:1px solid #f0f0f0';
+
+      const inner = document.createElement('div');
+      inner.style.cssText = 'display:flex;justify-content:space-between;align-items:start';
+
+      const info = document.createElement('div');
+      info.style.cssText = 'min-width:0';
+
+      const nameEl = document.createElement('div');
+      nameEl.style.cssText = 'font-size:13px;font-weight:500;color:#333;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+      nameEl.textContent = a.name;
+
+      const courseEl = document.createElement('div');
+      courseEl.style.cssText = 'font-size:11px;color:#999;margin-top:2px';
+      courseEl.textContent = a.courseShortname;
+
+      const timeEl = document.createElement('span');
+      timeEl.style.cssText = `font-size:11px;font-weight:600;color:${color};white-space:nowrap;margin-left:8px`;
+      timeEl.textContent = timeText;
+
+      info.append(nameEl, courseEl);
+      inner.append(info, timeEl);
+      row.appendChild(inner);
+      banner.appendChild(row);
     }
 
-    banner.innerHTML = html;
     document.body.appendChild(banner);
-
-    document.getElementById('e3-banner-close')?.addEventListener('click', () => {
-      banner.remove();
-    });
 
     // 30 秒後自動消失
     setTimeout(() => {

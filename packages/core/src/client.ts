@@ -179,12 +179,6 @@ export class MoodleClient {
 
     this.sesskey = match[1];
 
-    // Also try to extract userid
-    const useridMatch = html.match(/"userid"\s*:\s*(\d+)/);
-    if (useridMatch) {
-      (this as any)._detectedUserid = Number(useridMatch[1]);
-    }
-
     return match[1];
   }
 
@@ -273,9 +267,15 @@ export class MoodleClient {
    */
   getFileUrl(fileurl: string): string {
     if (this.token) {
-      const url = new URL(fileurl);
-      url.searchParams.set('token', this.token);
-      return url.toString();
+      try {
+        const url = new URL(fileurl);
+        url.searchParams.set('token', this.token);
+        return url.toString();
+      } catch {
+        // Malformed URL, return with query string appended
+        const sep = fileurl.includes('?') ? '&' : '?';
+        return `${fileurl}${sep}token=${this.token}`;
+      }
     }
     return fileurl;
   }

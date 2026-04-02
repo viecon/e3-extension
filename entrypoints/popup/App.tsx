@@ -44,7 +44,9 @@ export default function App() {
 
   const openSidePanel = () => {
     if (chrome.sidePanel) {
-      chrome.sidePanel.open({ windowId: undefined as unknown as number });
+      chrome.windows.getCurrent().then(w => {
+        if (w.id) chrome.sidePanel.open({ windowId: w.id });
+      });
     }
   };
 

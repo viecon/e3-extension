@@ -164,14 +164,6 @@ export async function moodleUploadDraft(
   file: File,
   itemid: number = 0,
 ): Promise<{ itemid: number; filename: string }> {
-  // 使用 Moodle 的 draftfile upload endpoint
-  const url = new URL('/draftfile.php/5/user/draft/' + itemid + '/', BASE_URL);
-
-  const formData = new FormData();
-  formData.append('sesskey', sesskey);
-  formData.append('repo_upload_file', file, file.name);
-
-  // 用 core_files_upload 通過 AJAX API 上傳
   const result = await moodleAjaxCall<{
     itemid: number;
     filename: string;
