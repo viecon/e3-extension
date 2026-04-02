@@ -19,6 +19,7 @@ interface CourseListProps {
 export function CourseList({ onSelectCourse }: CourseListProps) {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     loadCourses();
@@ -26,12 +27,13 @@ export function CourseList({ onSelectCourse }: CourseListProps) {
 
   const loadCourses = async () => {
     setLoading(true);
+    setError('');
     try {
       const result = await sendMessage('getCourses', undefined);
       const visible = (result.courses as Course[]).filter(c => c.visible && !c.hidden);
       setCourses(visible);
-    } catch {
-      // ignore
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : '載入失敗');
     } finally {
       setLoading(false);
     }
@@ -43,6 +45,15 @@ export function CourseList({ onSelectCourse }: CourseListProps) {
         <div className="flex items-center justify-center py-8">
           <span className="text-sm text-gray-500">載入課程...</span>
         </div>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <p className="text-sm text-e3-danger text-center py-4">{error}</p>
+        <button onClick={loadCourses} className="block mx-auto text-xs text-e3-accent hover:underline mb-2">重試</button>
       </Card>
     );
   }

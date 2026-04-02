@@ -23,20 +23,33 @@ function formatTime(ts: number): string {
 export function NotificationList() {
   const [notifs, setNotifs] = useState<NotifItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => { load(); }, []);
 
   const load = async () => {
     setLoading(true);
+    setError('');
     try {
       const result = await sendMessage('getNotifications', { limit: 20 });
       setNotifs(result.notifications as NotifItem[]);
-    } catch { /* ignore */ }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : '載入失敗');
+    }
     setLoading(false);
   };
 
   if (loading) {
     return <Card><div className="py-6 text-center text-sm text-gray-500">載入通知...</div></Card>;
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <p className="text-sm text-e3-danger text-center py-4">{error}</p>
+        <button onClick={load} className="block mx-auto text-xs text-e3-accent hover:underline mb-2">重試</button>
+      </Card>
+    );
   }
 
   return (

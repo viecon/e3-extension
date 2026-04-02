@@ -17,6 +17,7 @@ interface CourseInfo {
 export function GradeOverview() {
   const [grades, setGrades] = useState<{ course: string; grade: string }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     loadGrades();
@@ -24,6 +25,7 @@ export function GradeOverview() {
 
   const loadGrades = async () => {
     setLoading(true);
+    setError('');
     try {
       const [gradesResult, coursesResult] = await Promise.all([
         sendMessage('getGrades', {}),
@@ -43,8 +45,8 @@ export function GradeOverview() {
           })),
         );
       }
-    } catch {
-      // ignore
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : '載入失敗');
     } finally {
       setLoading(false);
     }
@@ -54,6 +56,15 @@ export function GradeOverview() {
     return (
       <Card>
         <div className="py-6 text-center text-sm text-gray-500">載入成績...</div>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <p className="text-sm text-e3-danger text-center py-4">{error}</p>
+        <button onClick={loadGrades} className="block mx-auto text-xs text-e3-accent hover:underline mb-2">重試</button>
       </Card>
     );
   }
