@@ -488,42 +488,46 @@ async function addDeadlineBanner() {
  * 注入 E3 網站 Dark Mode CSS（跟系統 dark mode 連動）
  */
 function injectDarkMode() {
-  // Use CSS filter invert approach — much more reliable than manual overrides.
-  // Inverts the entire page then re-inverts images/videos/icons so they look normal.
   const style = document.createElement('style');
   style.id = 'e3-dark-mode';
   style.textContent = `
 @media (prefers-color-scheme: dark) {
+  /* Invert everything except the navbar (which is already dark) */
   html {
     filter: invert(90%) hue-rotate(180deg);
     background: #111 !important;
   }
 
+  /* Re-invert the navbar so it stays its original dark blue */
+  nav.navbar, nav.navbar * {
+    filter: invert(111%) hue-rotate(180deg) !important;
+  }
+
   /* Re-invert media so images/videos look normal */
-  img, video, svg image, [style*="background-image"],
-  .userpicture, .activityiconcontainer img,
-  .course-info-container, canvas,
-  iframe, embed, object {
-    filter: invert(100%) hue-rotate(180deg) !important;
+  img, video, svg image, canvas,
+  iframe, embed, object,
+  .userpicture, .activityiconcontainer img {
+    filter: invert(111%) hue-rotate(180deg) !important;
   }
 
-  /* Fix E3 logo and header images */
-  .navbar img, header img, #page-header img {
-    filter: invert(100%) hue-rotate(180deg) !important;
-  }
+  /* Navbar images already handled by navbar re-invert, avoid double */
+  nav.navbar img { filter: none !important; }
 
-  /* Tone down pure blacks that become pure whites */
+  /* Body background — inverted white (#eee) becomes near-black */
   body { background-color: #eee !important; }
 
-  /* Fix shadows that look weird when inverted */
-  *, *::before, *::after {
-    box-shadow: none !important;
-    text-shadow: none !important;
+  /* Reduce harsh shadows */
+  * { text-shadow: none !important; }
+
+  /* Our own injected elements — re-invert to use their own colors */
+  #e3-quick-panel, .e3-panel-item, .e3-panel-header,
+  .e3-panel-loading, .e3-panel-empty {
+    filter: invert(111%) hue-rotate(180deg) !important;
   }
 
-  /* Our own injected elements — re-invert so they use their own dark colors */
-  #e3-quick-panel, .e3-panel-item, .e3-panel-header, .e3-panel-loading, .e3-panel-empty {
-    filter: invert(100%) hue-rotate(180deg) !important;
+  /* E3 助手 floating button — keep its blue */
+  button[style*="position: fixed"][style*="bottom: 20px"] {
+    filter: invert(111%) hue-rotate(180deg) !important;
   }
 
   /* Scrollbar */
