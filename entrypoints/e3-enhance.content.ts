@@ -492,15 +492,39 @@ function injectDarkMode() {
   style.id = 'e3-dark-mode';
   style.textContent = `
 @media (prefers-color-scheme: dark) {
-  /* Invert everything except the navbar (which is already dark) */
+  /* Invert the entire page */
   html {
     filter: invert(90%) hue-rotate(180deg);
     background: #111 !important;
   }
 
-  /* Re-invert the navbar so it stays its original dark blue */
-  nav.navbar, nav.navbar * {
-    filter: invert(111%) hue-rotate(180deg) !important;
+  /* Force white bg on containers so invert makes them consistently dark */
+  body { background-color: #eee !important; }
+  #page, #page-wrapper, #page-content, #region-main,
+  #region-main-box, .course-content, [role="main"],
+  .block, .card, .card-body, .card-header, .card-footer,
+  .dashboard-card-deck, .block_myoverview,
+  .section-summary, .course-section-header,
+  .container-fluid:not(.navbar .container-fluid) {
+    background-color: #fff !important;
+  }
+  #page-footer { background-color: #f5f5f5 !important; }
+
+  /* Navbar: already dark blue — set to bright so invert makes it dark again.
+     Do NOT use filter re-invert on navbar (breaks children like popovers). */
+  nav.navbar.bg-primary {
+    background-color: #d4e6f9 !important;
+  }
+  nav.navbar .nav-link, nav.navbar a { color: #1a3a5f !important; }
+
+  /* Notification & message popovers */
+  .popover-region-container, .popover-region-content-container {
+    background-color: #fff !important;
+  }
+
+  /* Drawers (sidebar, right panel) */
+  .drawer {
+    background-color: #f0f0f0 !important;
   }
 
   /* Re-invert media so images/videos look normal */
@@ -508,52 +532,19 @@ function injectDarkMode() {
     filter: invert(111%) hue-rotate(180deg) !important;
   }
 
-  /* Navbar images already handled by navbar re-invert, avoid double */
-  nav.navbar img { filter: none !important; }
-
-  /* FontAwesome icons — they're text, not images, so DON'T re-invert */
+  /* Icons: don't re-invert text-based icons */
   .icon, .fa, [class*="fa-"] {
     filter: none !important;
   }
 
-  /* Notification/message popover — lives inside re-inverted navbar,
-     needs its own re-invert to become dark again */
-  .popover-region-container, .popover-region-content-container,
-  [data-region="popover-region"] .popover-region-container {
-    filter: invert(111%) hue-rotate(180deg) !important;
-    background-color: #fff !important;
-  }
-
-  /* Fixed-position drawers (right-hand drawer, notification panel) */
-  .drawer, [data-region="right-hand-drawer"] {
-    filter: invert(90%) hue-rotate(180deg) !important;
-    background-color: #fff !important;
-  }
-  .drawer img { filter: invert(111%) hue-rotate(180deg) !important; }
-
-  /* Body & common white containers — ensure they're light so invert makes them dark */
-  body { background-color: #eee !important; }
-  #page, #page-wrapper, #page-content, .pagelayout-mydashboard #region-main,
-  .pagelayout-standard #region-main, .course-content,
-  .block, .card, .card-body, .card-header, .card-footer,
-  #region-main-box, .container-fluid:not(.navbar .container-fluid),
-  [role="main"], .dashboard-card-deck, .block_myoverview,
-  .section-summary, .course-section-header {
-    background-color: #fff !important;
-  }
-  /* Footer */
-  #page-footer { background-color: #f5f5f5 !important; }
-
   /* Reduce harsh shadows */
   * { text-shadow: none !important; }
 
-  /* Our own injected elements — re-invert to use their own colors */
+  /* Our own injected elements — re-invert to keep original colors */
   #e3-quick-panel, .e3-panel-item, .e3-panel-header,
   .e3-panel-loading, .e3-panel-empty {
     filter: invert(111%) hue-rotate(180deg) !important;
   }
-
-  /* E3 助手 floating button — keep its blue */
   button[style*="position: fixed"][style*="bottom: 20px"] {
     filter: invert(111%) hue-rotate(180deg) !important;
   }
