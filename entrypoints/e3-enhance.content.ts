@@ -230,9 +230,9 @@ async function addDeadlineBanner() {
 
     if (assignments.length === 0) return;
 
-    // 只顯示 3 天內的
+    // 顯示 7 天內的
     const now = Date.now() / 1000;
-    const urgent = assignments.filter(a => a.duedate > 0 && (a.duedate - now) < 3 * 86400);
+    const urgent = assignments.filter(a => a.duedate > 0 && (a.duedate - now) < 7 * 86400);
     if (urgent.length === 0) return;
 
     const banner = document.createElement('div');
@@ -288,13 +288,13 @@ async function addDeadlineBanner() {
       banner.remove();
     });
 
-    // 10 秒後自動消失
+    // 30 秒後自動消失
     setTimeout(() => {
       banner.style.transition = 'opacity 0.3s, transform 0.3s';
       banner.style.opacity = '0';
       banner.style.transform = 'translateX(100%)';
       setTimeout(() => banner.remove(), 300);
-    }, 10000);
+    }, 30000);
   } catch {
     // Extension might not have auth yet
   }
