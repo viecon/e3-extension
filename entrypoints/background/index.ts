@@ -288,6 +288,84 @@ export default defineBackground(() => {
     }
   });
 
+  // === News (forum announcements) ===
+  onMessage('getNews', async ({ data }) => {
+    try {
+      // Get courses
+      let courseids: number[];
+      if (data.courseId) {
+        courseids = [data.courseId];
+      } else {
+        const courses = await apiCall<{
+          courses: { id: number }[];
+        }>('core_course_get_enrolled_courses_by_timeline_classification', {
+          classification: 'inprogress', limit: 0, offset: 0, sort: 'fullname',
+        });
+        courseids = courses.courses.map(c => c.id);
+      }
+
+      // Get news forums
+      const forums = await apiCall<{ id: number; course: number; type: string; name: string }[]>(
+        'mod_forum_get_forums_by_courses', { courseids },
+      );
+      const newsForums = forums.filter(f => f.type === 'news');
+
+      const allNews: unknown[] = [];
+      const since = Math.floor(Date.now() / 1000) - 14 * 86400;
+
+      for (const forum of newsForums) {
+        const result = await apiCall<{ discussions: { subject: string; message: string; userfullname: string; timemodified: number }[] }>(
+          'mod_forum_get_forum_discussions', { forumid: forum.id, sortorder: -1, page: 0, perpage: 10 },
+        );
+        for (const d of result.discussions) {
+          if (d.timemodified < since) continue;
+          allNews.push({
+            subject: d.subject,
+            message: d.message,
+            author: d.userfullname,
+            time: d.timemodified,
+          });
+        }
+      }
+
+      allNews.sort((a: any, b: any) => b.time - a.time);
+      return { news: allNews };
+    } catch (err) { console.warn("[E3 助手]", err);
+      return { news: [] };
+    }
+  });
+
+  // === Notifications ===
+  onMessage('getNotifications', async ({ data }) => {
+    try {
+      const info = await userInfoStorage.getValue();
+      if (!info) return { notifications: [] };
+
+      const result = await apiCall<{ messages: { id: number; subject: string; smallmessage: string; fullmessagehtml: string; timecreated: number; timeread: number; userfromfullname: string; contexturl: string }[] }>(
+        'core_message_get_messages', {
+          useridto: info.userid,
+          type: 'notifications',
+          newestfirst: 1,
+          limitnum: data.limit,
+        },
+      );
+
+      return {
+        notifications: result.messages.map(m => ({
+          id: m.id,
+          subject: m.subject,
+          message: m.smallmessage || m.fullmessagehtml,
+          from: m.userfromfullname,
+          time: m.timecreated,
+          read: m.timeread > 0,
+          url: m.contexturl,
+        })),
+      };
+    } catch (err) { console.warn("[E3 助手]", err);
+      return { notifications: [] };
+    }
+  });
+
   // === CLI Export ===
   onMessage('exportForCli', async () => {
     try {

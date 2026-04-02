@@ -6,10 +6,12 @@ import { DownloadManager } from '@/components/DownloadManager';
 import { UploadDialog } from '@/components/UploadDialog';
 import { DeadlineTimeline } from '@/components/DeadlineTimeline';
 import { GradeOverview } from '@/components/GradeOverview';
+import { NewsList } from '@/components/NewsList';
+import { NotificationList } from '@/components/NotificationList';
 import { Button } from '@/components/ui/Button';
 import { sendMessage } from '@/lib/messages';
 
-type Tab = 'assignments' | 'courses' | 'calendar' | 'grades';
+type Tab = 'assignments' | 'courses' | 'calendar' | 'grades' | 'news' | 'notifications';
 type SubView =
   | { type: 'none' }
   | { type: 'download'; courseId: number; courseName: string }
@@ -68,8 +70,10 @@ export default function App() {
   const tabs: { key: Tab; label: string }[] = [
     { key: 'assignments', label: '作業' },
     { key: 'courses', label: '課程' },
+    { key: 'news', label: '公告' },
     { key: 'calendar', label: '行事曆' },
     { key: 'grades', label: '成績' },
+    { key: 'notifications', label: '通知' },
   ];
 
   return (
@@ -132,8 +136,10 @@ export default function App() {
                 }
               />
             )}
+            {tab === 'news' && <NewsList />}
             {tab === 'calendar' && <DeadlineTimeline />}
             {tab === 'grades' && <GradeOverview />}
+            {tab === 'notifications' && <NotificationList />}
           </>
         )}
       </div>

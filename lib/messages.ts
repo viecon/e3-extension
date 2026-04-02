@@ -27,6 +27,12 @@ interface ProtocolMap {
   // Grades
   getGrades: (data: { courseid?: number }) => { grades: unknown };
 
+  // News (forum announcements)
+  getNews: (data: { courseId?: number }) => { news: unknown[] };
+
+  // Notifications
+  getNotifications: (data: { limit: number }) => { notifications: unknown[] };
+
   // CLI export
   exportForCli: () => { cookie: string; instructions: string };
 }
