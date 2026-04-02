@@ -504,14 +504,32 @@ function injectDarkMode() {
   }
 
   /* Re-invert media so images/videos look normal */
-  img, video, svg image, canvas,
-  iframe, embed, object,
-  .userpicture, .activityiconcontainer img {
+  img, video, canvas, iframe, embed, object {
     filter: invert(111%) hue-rotate(180deg) !important;
   }
 
   /* Navbar images already handled by navbar re-invert, avoid double */
   nav.navbar img { filter: none !important; }
+
+  /* FontAwesome icons — they're text, not images, so DON'T re-invert */
+  .icon, .fa, [class*="fa-"] {
+    filter: none !important;
+  }
+
+  /* Notification/message popover — lives inside re-inverted navbar,
+     needs its own re-invert to become dark again */
+  .popover-region-container, .popover-region-content-container,
+  [data-region="popover-region"] .popover-region-container {
+    filter: invert(111%) hue-rotate(180deg) !important;
+    background-color: #fff !important;
+  }
+
+  /* Fixed-position drawers (right-hand drawer, notification panel) */
+  .drawer, [data-region="right-hand-drawer"] {
+    filter: invert(90%) hue-rotate(180deg) !important;
+    background-color: #fff !important;
+  }
+  .drawer img { filter: invert(111%) hue-rotate(180deg) !important; }
 
   /* Body & common white containers — ensure they're light so invert makes them dark */
   body { background-color: #eee !important; }
