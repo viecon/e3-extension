@@ -3,9 +3,9 @@ import { sendMessage } from '@/lib/messages';
 export default defineContentScript({
   matches: ['https://e3p.nycu.edu.tw/*'],
   runAt: 'document_idle',
-  main() {
-    // 1. 自動擷取 sesskey 和使用者資訊
-    extractAndSaveSession();
+  async main() {
+    // 1. 自動擷取 sesskey 並等待存入 (後續功能需要 auth)
+    await extractAndSaveSession();
 
     // 2. 浮動按鈕
     addFloatingButton();
@@ -24,7 +24,7 @@ export default defineContentScript({
       enhanceAssignmentPage();
     }
 
-    // 5. 首頁截止日提醒 banner
+    // 5. 首頁截止日提醒 banner (需要 auth 所以放最後)
     if (window.location.pathname === '/my/' || window.location.pathname === '/my') {
       addDeadlineBanner();
     }
@@ -34,7 +34,7 @@ export default defineContentScript({
 /**
  * 從當前 E3 頁面擷取 sesskey 和使用者資訊
  */
-function extractAndSaveSession() {
+async function extractAndSaveSession() {
   const scriptTags = document.querySelectorAll('script');
   let sesskey: string | null = null;
   let userid: number | undefined;
@@ -75,7 +75,11 @@ function extractAndSaveSession() {
   }
 
   if (sesskey) {
-    sendMessage('saveSessionInfo', { sesskey, userid, fullname, username }).catch(() => {});
+    try {
+      await sendMessage('saveSessionInfo', { sesskey, userid, fullname, username });
+    } catch {
+      // Extension context might not be ready
+    }
   }
 }
 
