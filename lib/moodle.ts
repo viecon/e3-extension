@@ -6,7 +6,7 @@
  * 改為從已登入的 E3 頁面擷取 sesskey，搭配瀏覽器自動帶的 session cookie 使用。
  */
 
-const BASE_URL = 'https://e3p.nycu.edu.tw';
+export const BASE_URL = 'https://e3p.nycu.edu.tw';
 
 export class MoodleApiError extends Error {
   constructor(

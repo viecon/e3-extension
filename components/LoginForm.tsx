@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from './ui/Button';
+import { BASE_URL } from '@/lib/moodle';
 import { sendMessage } from '@/lib/messages';
 
 interface LoginFormProps {
@@ -47,7 +48,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
   };
 
   const openE3 = () => {
-    chrome.tabs.create({ url: 'https://e3p.nycu.edu.tw/my/' });
+    chrome.tabs.create({ url: `${BASE_URL}/my/` });
   };
 
   return (

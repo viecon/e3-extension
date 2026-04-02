@@ -9,6 +9,7 @@ import {
   moodleAjaxCall,
   moodleRestCall,
   checkSession,
+  BASE_URL,
 } from '@/lib/moodle';
 
 /**
@@ -437,7 +438,7 @@ async function scrapeCourseFiles(
   courseid: number,
   typeFilter?: string[],
 ): Promise<{ sectionName: string; moduleName: string; filename: string; fileurl: string; filesize: number; mimetype: string | undefined }[]> {
-  const courseRes = await fetch(`https://e3p.nycu.edu.tw/course/view.php?id=${courseid}`, {
+  const courseRes = await fetch(`${BASE_URL}/course/view.php?id=${courseid}`, {
     credentials: 'include',
   });
   if (!courseRes.ok) return [];
@@ -488,7 +489,7 @@ async function scrapeCourseFiles(
     const results = await Promise.all(
       batch.map(async (fid) => {
         try {
-          const res = await fetch(`https://e3p.nycu.edu.tw/mod/folder/view.php?id=${fid}`, {
+          const res = await fetch(`${BASE_URL}/mod/folder/view.php?id=${fid}`, {
             credentials: 'include',
           });
           if (!res.ok) return '';
@@ -530,7 +531,7 @@ async function scrapeCourseFiles(
       batch.map(async (rid) => {
         try {
           // mod/resource usually redirects to the actual file
-          const res = await fetch(`https://e3p.nycu.edu.tw/mod/resource/view.php?id=${rid}`, {
+          const res = await fetch(`${BASE_URL}/mod/resource/view.php?id=${rid}`, {
             credentials: 'include',
             redirect: 'manual',
           });

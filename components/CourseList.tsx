@@ -1,3 +1,4 @@
+import { BASE_URL } from '@/lib/moodle';
 import React, { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle } from './ui/Card';
 import { sendMessage } from '@/lib/messages';
@@ -65,7 +66,7 @@ export function CourseList({ onSelectCourse }: CourseListProps) {
               <p className="text-xs text-gray-400">{c.shortname}</p>
             </div>
             <a
-              href={`https://e3p.nycu.edu.tw/course/view.php?id=${c.id}`}
+              href={`${BASE_URL}/course/view.php?id=${c.id}`}
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs text-e3-accent hover:underline shrink-0 ml-2"

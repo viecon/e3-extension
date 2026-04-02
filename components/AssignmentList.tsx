@@ -1,3 +1,4 @@
+import { BASE_URL } from '@/lib/moodle';
 import React, { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle } from './ui/Card';
 import { sendMessage } from '@/lib/messages';
@@ -103,7 +104,7 @@ export function AssignmentList() {
           {assignments.map((a) => (
             <a
               key={a.id}
-              href={a.url || `https://e3p.nycu.edu.tw/mod/assign/view.php?id=${a.cmid}`}
+              href={a.url || `${BASE_URL}/mod/assign/view.php?id=${a.cmid}`}
               target="_blank"
               rel="noopener noreferrer"
               className={`block p-3 rounded-lg border-l-4 bg-gray-50 hover:bg-gray-100 transition-colors ${getUrgencyBorder(a.duedate)}`}

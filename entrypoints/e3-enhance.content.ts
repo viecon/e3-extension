@@ -1,4 +1,5 @@
 import { sendMessage } from '@/lib/messages';
+import { BASE_URL } from '@/lib/moodle';
 
 export default defineContentScript({
   matches: ['https://e3p.nycu.edu.tw/*'],
@@ -261,7 +262,7 @@ async function loadPanelData(panel: HTMLDivElement) {
       item.style.cursor = 'pointer';
 
       const link = document.createElement('a');
-      link.href = c.viewurl || `https://e3p.nycu.edu.tw/course/view.php?id=${c.id}`;
+      link.href = c.viewurl || `${BASE_URL}/course/view.php?id=${c.id}`;
       link.style.cssText = 'font-size:13px;display:block';
       link.textContent = c.fullname;
 
