@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle } from './ui/Card';
 import { sendMessage } from '@/lib/messages';
+import { stripHtml } from '@/lib/utils';
 
 interface NotifItem {
   id: number;
@@ -12,11 +13,6 @@ interface NotifItem {
   url: string;
 }
 
-function stripHtml(html: string): string {
-  const div = document.createElement('div');
-  div.innerHTML = html;
-  return div.textContent ?? '';
-}
 
 function formatTime(ts: number): string {
   return new Date(ts * 1000).toLocaleDateString('zh-TW', {
