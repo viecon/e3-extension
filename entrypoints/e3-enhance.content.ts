@@ -84,16 +84,19 @@ async function extractAndSaveSession() {
 }
 
 /**
- * 浮動 E3 助手按鈕
+ * 浮動 E3 助手按鈕 + 快速面板
  */
 function addFloatingButton() {
+  let panelOpen = false;
+  let panel: HTMLDivElement | null = null;
+
   const btn = document.createElement('button');
   btn.textContent = 'E3 助手';
   btn.style.cssText = `
     position: fixed;
     bottom: 20px;
     right: 20px;
-    z-index: 10000;
+    z-index: 10001;
     background: #4a90d9;
     color: white;
     border: none;
@@ -114,11 +117,164 @@ function addFloatingButton() {
     btn.style.boxShadow = '0 2px 12px rgba(74, 144, 217, 0.4)';
   });
   btn.addEventListener('click', () => {
-    if (chrome?.sidePanel) {
-      chrome.runtime.sendMessage({ type: 'openSidePanel' });
+    if (panelOpen && panel) {
+      panel.remove();
+      panel = null;
+      panelOpen = false;
+      btn.textContent = 'E3 助手';
+      return;
     }
+    panelOpen = true;
+    btn.textContent = '收起';
+    panel = createQuickPanel();
+    document.body.appendChild(panel);
   });
   document.body.appendChild(btn);
+}
+
+/**
+ * 建立快速面板：未繳作業 + 課程連結
+ */
+function createQuickPanel(): HTMLDivElement {
+  const panel = document.createElement('div');
+  panel.style.cssText = `
+    position: fixed;
+    bottom: 65px;
+    right: 20px;
+    z-index: 10000;
+    width: 340px;
+    max-height: 480px;
+    overflow-y: auto;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    animation: e3SlideUp 0.2s ease-out;
+  `;
+
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes e3SlideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .e3-panel-item { padding: 10px 16px; border-bottom: 1px solid #f0f0f0; cursor: default; transition: background 0.15s; }
+    .e3-panel-item:hover { background: #f8f9fa; }
+    .e3-panel-item a { color: #4a90d9; text-decoration: none; }
+    .e3-panel-item a:hover { text-decoration: underline; }
+    .e3-panel-header { padding: 12px 16px; font-size: 13px; font-weight: 600; color: #1e3a5f; border-bottom: 2px solid #4a90d9; }
+    .e3-panel-empty { padding: 16px; text-align: center; color: #999; font-size: 13px; }
+    .e3-panel-loading { padding: 20px; text-align: center; color: #999; font-size: 13px; }
+  `;
+  document.head.appendChild(style);
+
+  // Loading state
+  panel.innerHTML = '<div class="e3-panel-loading">載入中...</div>';
+
+  // Load data
+  loadPanelData(panel);
+
+  return panel;
+}
+
+async function loadPanelData(panel: HTMLDivElement) {
+  try {
+    const [assignResult, courseResult] = await Promise.all([
+      sendMessage('getPendingAssignments', undefined),
+      sendMessage('getCourses', undefined),
+    ]);
+
+    const assignments = assignResult.assignments as {
+      name: string;
+      courseShortname: string;
+      duedate: number;
+      isOverdue: boolean;
+      url?: string;
+    }[];
+
+    const courses = courseResult.courses as {
+      id: number;
+      shortname: string;
+      fullname: string;
+      viewurl: string;
+    }[];
+
+    // Clear loading
+    panel.textContent = '';
+
+    // === Assignments section ===
+    const assignHeader = document.createElement('div');
+    assignHeader.className = 'e3-panel-header';
+    assignHeader.textContent = `未繳作業 (${assignments.length})`;
+    panel.appendChild(assignHeader);
+
+    if (assignments.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'e3-panel-empty';
+      empty.textContent = '沒有未繳作業';
+      panel.appendChild(empty);
+    } else {
+      for (const a of assignments) {
+        const item = document.createElement('div');
+        item.className = 'e3-panel-item';
+
+        const now = Date.now() / 1000;
+        const hoursLeft = Math.max(0, Math.round((a.duedate - now) / 3600));
+        const color = a.isOverdue ? '#e74c3c' : hoursLeft < 24 ? '#e74c3c' : hoursLeft < 72 ? '#f39c12' : '#27ae60';
+        const timeText = a.isOverdue ? '已逾期' : hoursLeft < 24 ? `${hoursLeft}h` : `${Math.round(hoursLeft / 24)}d`;
+
+        const nameEl = document.createElement('div');
+        nameEl.style.cssText = 'font-size:13px;font-weight:500;color:#333';
+        if (a.url) {
+          const link = document.createElement('a');
+          link.href = a.url;
+          link.target = '_blank';
+          link.textContent = a.name;
+          nameEl.appendChild(link);
+        } else {
+          nameEl.textContent = a.name;
+        }
+
+        const meta = document.createElement('div');
+        meta.style.cssText = 'display:flex;justify-content:space-between;margin-top:3px';
+
+        const course = document.createElement('span');
+        course.style.cssText = 'font-size:11px;color:#999';
+        course.textContent = a.courseShortname;
+
+        const time = document.createElement('span');
+        time.style.cssText = `font-size:11px;font-weight:600;color:${color}`;
+        time.textContent = timeText;
+
+        meta.append(course, time);
+        item.append(nameEl, meta);
+        panel.appendChild(item);
+      }
+    }
+
+    // === Courses section ===
+    const courseHeader = document.createElement('div');
+    courseHeader.className = 'e3-panel-header';
+    courseHeader.textContent = '課程';
+    panel.appendChild(courseHeader);
+
+    for (const c of courses.slice(0, 8)) {
+      const item = document.createElement('div');
+      item.className = 'e3-panel-item';
+
+      const link = document.createElement('a');
+      link.href = c.viewurl || `https://e3p.nycu.edu.tw/course/view.php?id=${c.id}`;
+      link.target = '_blank';
+      link.style.cssText = 'font-size:13px;display:block';
+      link.textContent = c.fullname;
+
+      item.appendChild(link);
+      panel.appendChild(item);
+    }
+  } catch {
+    panel.textContent = '';
+    const err = document.createElement('div');
+    err.className = 'e3-panel-empty';
+    err.textContent = '無法載入，請先在 Extension 登入';
+    panel.appendChild(err);
+  }
 }
 
 /**
