@@ -537,10 +537,10 @@ function injectDarkMode() {
     filter: none !important;
   }
 
-  /* Activity icons: skip re-invert entirely, just invert them to white */
+  /* Activity icons: exclude from img re-invert so they follow the global invert */
   .activityiconcontainer img, .activityicon,
   .courseicon img, .icon.activityicon {
-    filter: invert(50%) brightness(2) !important;
+    filter: none !important;
   }
 
   /* Reduce harsh shadows */
