@@ -5,8 +5,13 @@
     "outDir": ".output",
     "rootDir": ".",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@e3/core": ["../core/src/index.ts"],
+      "@e3/core/*": ["../core/src/*"]
     }
   },
-  "include": ["**/*.ts", "**/*.tsx", ".wxt/**/*.ts"]
+  "include": ["**/*.ts", "**/*.tsx", ".wxt/**/*.ts"],
+  "references": [
+    { "path": "../core" }
+  ]
 }
