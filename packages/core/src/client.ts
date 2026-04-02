@@ -5,6 +5,13 @@ import { DEFAULT_BASE_URL } from './constants.js';
 const BASE_URL = DEFAULT_BASE_URL;
 const REST_PATH = '/webservice/rest/server.php';
 const AJAX_PATH = '/lib/ajax/service.php';
+const REQUEST_TIMEOUT_MS = 30000;
+
+function fetchWithTimeout(url: string, init: RequestInit = {}): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  return fetch(url, { ...init, signal: controller.signal }).finally(() => clearTimeout(timer));
+}
 
 export class MoodleApiError extends Error {
   constructor(
@@ -71,7 +78,7 @@ export class MoodleClient {
     const body = new URLSearchParams();
     flattenParams(params, body);
 
-    const res = await fetch(url.toString(), {
+    const res = await fetchWithTimeout(url.toString(), {
       method: 'POST',
       body,
       headers: this.extraHeaders,
@@ -122,7 +129,7 @@ export class MoodleClient {
       headers['Cookie'] = `MoodleSession=${this.sessionCookie}`;
     }
 
-    const res = await fetch(url.toString(), {
+    const res = await fetchWithTimeout(url.toString(), {
       method: 'POST',
       headers,
       body: JSON.stringify(payload),
@@ -164,7 +171,7 @@ export class MoodleClient {
       headers['Cookie'] = `MoodleSession=${this.sessionCookie}`;
     }
 
-    const res = await fetch(`${this.baseUrl}/my/`, {
+    const res = await fetchWithTimeout(`${this.baseUrl}/my/`, {
       headers,
       redirect: 'manual',
     });
@@ -211,7 +218,7 @@ export class MoodleClient {
     formData.append('itemid', String(itemid));
     formData.append('file', file, filename);
 
-    const res = await fetch(url.toString(), {
+    const res = await fetchWithTimeout(url.toString(), {
       method: 'POST',
       body: formData,
       headers: this.extraHeaders,
@@ -302,7 +309,7 @@ export class MoodleClient {
     }
 
     const url = this.getFileUrl(fileurl);
-    const res = await fetch(url, { headers });
+    const res = await fetchWithTimeout(url, { headers });
 
     if (!res.ok) {
       throw new MoodleApiError('download_error', `Download failed: HTTP ${res.status}`);
