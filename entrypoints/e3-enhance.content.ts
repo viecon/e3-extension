@@ -768,7 +768,7 @@ function initCommandPalette() {
 
   // Listen for Ctrl+K
   document.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'K') {
       e.preventDefault();
       e.stopPropagation();
       if (overlay) close(); else open();
