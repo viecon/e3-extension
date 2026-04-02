@@ -307,7 +307,30 @@ export default defineBackground(() => {
     return { cookie: '', instructions: '請先在瀏覽器登入 E3' };
   });
 
-  // === Notifications ===
+  // === Badge: show pending assignment count on toolbar icon ===
+  async function updateBadge() {
+    try {
+      const now = Math.floor(Date.now() / 1000);
+      const result = await apiCall<{
+        events: { action?: { actionable: boolean }; modulename: string }[];
+      }>('core_calendar_get_action_events_by_timesort', {
+        timesortfrom: now - 86400,
+        timesortto: now + 30 * 86400,
+      });
+
+      const count = result.events.filter(
+        e => e.action?.actionable && e.modulename === 'assign',
+      ).length;
+
+      chrome.action.setBadgeText({ text: count > 0 ? String(count) : '' });
+      chrome.action.setBadgeBackgroundColor({ color: count > 0 ? '#e74c3c' : '#4a90d9' });
+    } catch {
+      chrome.action.setBadgeText({ text: '' });
+    }
+  }
+
+  // Update badge on startup and periodically
+  updateBadge();
   chrome.alarms.create('checkDeadlines', { periodInMinutes: 30 });
 
   chrome.alarms.onAlarm.addListener(async (alarm) => {
@@ -318,12 +341,13 @@ export default defineBackground(() => {
     if (!sesskey && !token) return;
 
     try {
-      // Refresh sesskey
       const session = await checkSession();
       if (session.valid && session.sesskey) {
         await sesskeyStorage.setValue(session.sesskey);
       }
     } catch { /* ok */ }
+
+    updateBadge();
   });
 });
 
