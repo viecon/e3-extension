@@ -513,8 +513,18 @@ function injectDarkMode() {
   /* Navbar images already handled by navbar re-invert, avoid double */
   nav.navbar img { filter: none !important; }
 
-  /* Body background — inverted white (#eee) becomes near-black */
+  /* Body & common white containers — ensure they're light so invert makes them dark */
   body { background-color: #eee !important; }
+  #page, #page-wrapper, #page-content, .pagelayout-mydashboard #region-main,
+  .pagelayout-standard #region-main, .course-content,
+  .block, .card, .card-body, .card-header, .card-footer,
+  #region-main-box, .container-fluid:not(.navbar .container-fluid),
+  [role="main"], .dashboard-card-deck, .block_myoverview,
+  .section-summary, .course-section-header {
+    background-color: #fff !important;
+  }
+  /* Footer */
+  #page-footer { background-color: #f5f5f5 !important; }
 
   /* Reduce harsh shadows */
   * { text-shadow: none !important; }
