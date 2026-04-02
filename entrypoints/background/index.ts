@@ -21,7 +21,7 @@ async function apiCall<T>(wsfunction: string, params: Record<string, unknown> = 
   if (token) {
     try {
       return await moodleRestCall<T>(token, wsfunction, params);
-    } catch {
+    } catch (err) { console.warn("[E3 助手]", err);
       // Token might be invalid, try session fallback
     }
   }
@@ -139,7 +139,8 @@ export default defineBackground(() => {
         sort: 'fullname',
       });
       return { courses: result.courses };
-    } catch {
+    } catch (err) {
+      console.warn('[E3 助手] getCourses failed:', err);
       return { courses: [] };
     }
   });
@@ -190,7 +191,7 @@ export default defineBackground(() => {
         }));
 
       return { assignments };
-    } catch {
+    } catch (err) { console.warn("[E3 助手]", err);
       return { assignments: [] };
     }
   });
@@ -203,7 +204,7 @@ export default defineBackground(() => {
     try {
       const files = await scrapeCourseFiles(data.courseid, data.typeFilter);
       return { files };
-    } catch {
+    } catch (err) { console.warn("[E3 助手]", err);
       return { files: [] };
     }
   });
@@ -221,7 +222,7 @@ export default defineBackground(() => {
         count++;
       }
       return { count };
-    } catch {
+    } catch (err) { console.warn("[E3 助手]", err);
       return { count: 0 };
     }
   });
@@ -237,7 +238,7 @@ export default defineBackground(() => {
         { timesortfrom: now, timesortto: until },
       );
       return { events: result.events };
-    } catch {
+    } catch (err) { console.warn("[E3 助手]", err);
       // Try upcoming view as fallback
       try {
         const result = await apiCall<{ events: unknown[] }>(
@@ -245,7 +246,7 @@ export default defineBackground(() => {
           {},
         );
         return { events: result.events };
-      } catch {
+      } catch (err) { console.warn("[E3 助手]", err);
         return { events: [] };
       }
     }
@@ -269,7 +270,7 @@ export default defineBackground(() => {
         userid: info.userid,
       });
       return { grades: result };
-    } catch {
+    } catch (err) { console.warn("[E3 助手]", err);
       return { grades: null };
     }
   });
@@ -282,7 +283,7 @@ export default defineBackground(() => {
         plugindata: { files_filemanager: data.itemid },
       });
       return { success: true };
-    } catch {
+    } catch (err) { console.warn("[E3 助手]", err);
       return { success: false };
     }
   });
@@ -295,12 +296,13 @@ export default defineBackground(() => {
         name: 'MoodleSession',
       });
       if (cookie) {
+        const masked = cookie.value.slice(0, 4) + '****' + cookie.value.slice(-4);
         return {
           cookie: cookie.value,
-          instructions: `執行: e3 login --session "${cookie.value}"`,
+          instructions: `執行: e3 login --session "..." (cookie: ${masked})，請從 DevTools > Application > Cookies 複製完整值`,
         };
       }
-    } catch { /* ignore */ }
+    } catch { /* ok */ }
 
     return { cookie: '', instructions: '請先在瀏覽器登入 E3' };
   });
@@ -321,7 +323,7 @@ export default defineBackground(() => {
       if (session.valid && session.sesskey) {
         await sesskeyStorage.setValue(session.sesskey);
       }
-    } catch { /* ignore */ }
+    } catch { /* ok */ }
   });
 });
 
@@ -389,7 +391,7 @@ async function scrapeCourseFiles(
           });
           if (!res.ok) return '';
           return res.text();
-        } catch {
+        } catch (err) { console.warn("[E3 助手]", err);
           return '';
         }
       }),
@@ -439,7 +441,7 @@ async function scrapeCourseFiles(
             return { url: '', html: await res.text() };
           }
           return { url: '', html: '' };
-        } catch {
+        } catch (err) { console.warn("[E3 助手]", err);
           return { url: '', html: '' };
         }
       }),

@@ -44,7 +44,7 @@ async function extractAndSaveSession() {
   for (const script of scriptTags) {
     const text = script.textContent ?? '';
     if (!sesskey) {
-      const m = text.match(/"sesskey"\s*:\s*"([a-zA-Z0-9]+)"/);
+      const m = text.match(/"sesskey"\s*:\s*"([^"]+)"/);
       if (m) sesskey = m[1];
     }
     if (!userid) {
@@ -69,7 +69,7 @@ async function extractAndSaveSession() {
   if (!sesskey) {
     const logoutLink = document.querySelector('a[href*="logout.php"]') as HTMLAnchorElement | null;
     if (logoutLink) {
-      const m = logoutLink.href.match(/sesskey=([a-zA-Z0-9]+)/);
+      const m = logoutLink.href.match(/sesskey=([^&]+)/);
       if (m) sesskey = m[1];
     }
   }
