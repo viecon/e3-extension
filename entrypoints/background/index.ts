@@ -311,7 +311,7 @@ export default defineBackground(() => {
       );
       const newsForums = forums.filter(f => f.type === 'news');
 
-      const allNews: unknown[] = [];
+      const allNews: { subject: string; message: string; author: string; time: number }[] = [];
       const since = Math.floor(Date.now() / 1000) - 14 * 86400;
 
       for (const forum of newsForums) {
@@ -329,7 +329,7 @@ export default defineBackground(() => {
         }
       }
 
-      allNews.sort((a: any, b: any) => b.time - a.time);
+      allNews.sort((a, b) => b.time - a.time);
       return { news: allNews };
     } catch (err) { console.warn("[E3 助手]", err);
       return { news: [] };
