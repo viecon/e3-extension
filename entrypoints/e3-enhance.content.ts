@@ -225,8 +225,8 @@ async function loadPanelData(panel: HTMLDivElement) {
         if (a.url) {
           const link = document.createElement('a');
           link.href = a.url;
-          link.target = '_blank';
           link.textContent = a.name;
+          link.addEventListener('click', (e) => { e.preventDefault(); window.location.href = link.href; });
           nameEl.appendChild(link);
         } else {
           nameEl.textContent = a.name;
@@ -255,15 +255,21 @@ async function loadPanelData(panel: HTMLDivElement) {
     courseHeader.textContent = '課程';
     panel.appendChild(courseHeader);
 
-    for (const c of courses.slice(0, 8)) {
+    for (const c of courses) {
       const item = document.createElement('div');
       item.className = 'e3-panel-item';
+      item.style.cursor = 'pointer';
 
       const link = document.createElement('a');
       link.href = c.viewurl || `https://e3p.nycu.edu.tw/course/view.php?id=${c.id}`;
-      link.target = '_blank';
       link.style.cssText = 'font-size:13px;display:block';
       link.textContent = c.fullname;
+
+      // Navigate in same tab for quick course switching
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.location.href = link.href;
+      });
 
       item.appendChild(link);
       panel.appendChild(item);
