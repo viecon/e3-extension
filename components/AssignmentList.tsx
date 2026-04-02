@@ -97,7 +97,7 @@ export function AssignmentList() {
       </CardHeader>
 
       {assignments.length === 0 ? (
-        <p className="text-sm text-gray-500 text-center py-4">沒有未完成的作業 🎉</p>
+        <p className="text-sm text-gray-500 text-center py-4">沒有未完成的作業</p>
       ) : (
         <div className="space-y-2">
           {assignments.map((a) => (

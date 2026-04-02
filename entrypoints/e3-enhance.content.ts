@@ -125,7 +125,7 @@ function addBatchDownloadButton(courseId: string) {
   if (!header) return;
 
   const downloadBtn = document.createElement('button');
-  downloadBtn.textContent = '📥 批次下載教材';
+  downloadBtn.textContent = '批次下載教材';
   downloadBtn.style.cssText = `
     margin-left: 12px;
     background: #4a90d9;
@@ -145,14 +145,14 @@ function addBatchDownloadButton(courseId: string) {
     downloadBtn.style.opacity = '0.6';
     try {
       await sendMessage('downloadCourseFiles', { courseid: Number(courseId) });
-      downloadBtn.textContent = '✓ 下載完成';
+      downloadBtn.textContent = '下載完成';
       downloadBtn.style.background = '#27ae60';
     } catch {
-      downloadBtn.textContent = '✗ 下載失敗';
+      downloadBtn.textContent = '下載失敗';
       downloadBtn.style.background = '#e74c3c';
     }
     setTimeout(() => {
-      downloadBtn.textContent = '📥 批次下載教材';
+      downloadBtn.textContent = '批次下載教材';
       downloadBtn.style.background = '#4a90d9';
       downloadBtn.style.opacity = '1';
     }, 3000);
@@ -206,7 +206,7 @@ function enhanceAssignmentPage() {
     font-size: 13px;
     color: #1e3a5f;
   `;
-  tip.innerHTML = '💡 <strong>E3 助手提示</strong>：可以用 Side Panel 的上傳功能一次上傳多個檔案';
+  tip.innerHTML = '<strong>E3 助手</strong> — 可以用 Side Panel 的上傳功能一次上傳多個檔案';
   submissionStatus.parentNode?.insertBefore(tip, submissionStatus.nextSibling);
 }
 
@@ -254,7 +254,7 @@ async function addDeadlineBanner() {
 
     let html = `
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <span style="font-size:14px;font-weight:600;color:#1e3a5f">⚠️ 即將截止的作業</span>
+        <span style="font-size:14px;font-weight:600;color:#1e3a5f">即將截止的作業</span>
         <button id="e3-banner-close" style="background:none;border:none;cursor:pointer;font-size:18px;color:#999;padding:0 4px">✕</button>
       </div>
     `;

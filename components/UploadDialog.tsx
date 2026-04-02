@@ -83,7 +83,7 @@ export function UploadDialog({ assignmentId, assignmentName, onBack }: UploadDia
 
       {done ? (
         <div className="text-center py-6">
-          <p className="text-lg">✅</p>
+          <p className="text-sm font-bold text-e3-success">V</p>
           <p className="text-sm font-medium text-e3-success mt-2">作業提交成功！</p>
           <Button onClick={onBack} variant="secondary" size="sm" className="mt-4">
             返回
