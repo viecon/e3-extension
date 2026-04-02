@@ -11,6 +11,7 @@ import {
   checkSession,
   BASE_URL,
 } from '@/lib/moodle';
+import { SECONDS_PER_DAY } from '@e3/core';
 
 /**
  * Call Moodle API.
@@ -153,7 +154,7 @@ export default defineBackground(() => {
   onMessage('getPendingAssignments', async () => {
     try {
       const now = Math.floor(Date.now() / 1000);
-      const until = now + 60 * 86400; // 60 days ahead
+      const until = now + 60 * SECONDS_PER_DAY /* 60 days */; // 60 days ahead
 
       const result = await apiCall<{
         events: {
@@ -171,7 +172,7 @@ export default defineBackground(() => {
           action?: { name: string; url: string; actionable: boolean; itemcount: number };
         }[];
       }>('core_calendar_get_action_events_by_timesort', {
-        timesortfrom: now - 86400,
+        timesortfrom: now - SECONDS_PER_DAY /* 1 day */,
         timesortto: until,
       });
 
@@ -232,7 +233,7 @@ export default defineBackground(() => {
   onMessage('getCalendarEvents', async ({ data }) => {
     try {
       const now = Math.floor(Date.now() / 1000);
-      const until = now + data.days * 86400;
+      const until = now + data.days * SECONDS_PER_DAY;
 
       const result = await apiCall<{ events: unknown[] }>(
         'core_calendar_get_action_events_by_timesort',
@@ -312,7 +313,7 @@ export default defineBackground(() => {
       const newsForums = forums.filter(f => f.type === 'news');
 
       const allNews: { subject: string; message: string; author: string; time: number }[] = [];
-      const since = Math.floor(Date.now() / 1000) - 14 * 86400;
+      const since = Math.floor(Date.now() / 1000) - 14 * SECONDS_PER_DAY;
 
       for (const forum of newsForums) {
         const result = await apiCall<{ discussions: { subject: string; message: string; userfullname: string; timemodified: number }[] }>(
@@ -393,8 +394,8 @@ export default defineBackground(() => {
       const result = await apiCall<{
         events: { action?: { actionable: boolean }; modulename: string }[];
       }>('core_calendar_get_action_events_by_timesort', {
-        timesortfrom: now - 86400,
-        timesortto: now + 30 * 86400,
+        timesortfrom: now - SECONDS_PER_DAY /* 1 day */,
+        timesortto: now + 30 * SECONDS_PER_DAY,
       });
 
       const count = result.events.filter(
