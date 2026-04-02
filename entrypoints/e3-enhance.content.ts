@@ -1,5 +1,6 @@
 import { sendMessage } from '@/lib/messages';
 import { BASE_URL } from '@/lib/moodle';
+import { darkModeStorage } from '@/lib/storage';
 
 export default defineContentScript({
   matches: ['https://e3p.nycu.edu.tw/*'],
@@ -485,81 +486,66 @@ async function addDeadlineBanner() {
 }
 
 /**
- * 注入 E3 網站 Dark Mode CSS（跟系統 dark mode 連動）
+ * 注入 E3 網站 Dark Mode CSS
+ * 支援三種模式：auto (跟系統), dark (強制深色), light (強制淺色)
  */
-function injectDarkMode() {
-  const style = document.createElement('style');
-  style.id = 'e3-dark-mode';
-  style.textContent = `
-@media (prefers-color-scheme: dark) {
-  /* Invert the entire page */
-  html {
+async function injectDarkMode() {
+  const DARK_CSS = `
+  html.e3-dark {
     filter: invert(90%) hue-rotate(180deg);
     background: #111 !important;
   }
-
-  /* Force white bg on containers so invert makes them consistently dark */
-  body { background-color: #eee !important; }
-  #page, #page-wrapper, #page-content, #region-main,
-  #region-main-box, .course-content, [role="main"],
-  .block, .card, .card-body, .card-header, .card-footer,
-  .dashboard-card-deck, .block_myoverview,
-  .section-summary, .course-section-header,
-  .container-fluid:not(.navbar .container-fluid) {
+  html.e3-dark body { background-color: #eee !important; }
+  html.e3-dark #page, html.e3-dark #page-wrapper, html.e3-dark #page-content,
+  html.e3-dark #region-main, html.e3-dark #region-main-box,
+  html.e3-dark .course-content, html.e3-dark [role="main"],
+  html.e3-dark .block, html.e3-dark .card, html.e3-dark .card-body,
+  html.e3-dark .card-header, html.e3-dark .card-footer,
+  html.e3-dark .dashboard-card-deck, html.e3-dark .block_myoverview,
+  html.e3-dark .section-summary, html.e3-dark .course-section-header,
+  html.e3-dark .container-fluid:not(.navbar .container-fluid) {
     background-color: #fff !important;
   }
-  #page-footer { background-color: #f5f5f5 !important; }
-
-  /* Navbar: already dark blue — set to bright so invert makes it dark again.
-     Do NOT use filter re-invert on navbar (breaks children like popovers). */
-  nav.navbar.bg-primary {
-    background-color: #d4e6f9 !important;
-  }
-  nav.navbar .nav-link, nav.navbar a { color: #1a3a5f !important; }
-
-  /* Notification & message popovers */
-  .popover-region-container, .popover-region-content-container {
-    background-color: #fff !important;
-  }
-
-  /* Drawers (sidebar, right panel) */
-  .drawer {
-    background-color: #f0f0f0 !important;
-  }
-
-  /* Re-invert media so images/videos look normal */
-  img, video, canvas, iframe, embed, object {
+  html.e3-dark #page-footer { background-color: #f5f5f5 !important; }
+  html.e3-dark nav.navbar.bg-primary { background-color: #d4e6f9 !important; }
+  html.e3-dark nav.navbar .nav-link, html.e3-dark nav.navbar a { color: #1a3a5f !important; }
+  html.e3-dark .popover-region-container, html.e3-dark .popover-region-content-container { background-color: #fff !important; }
+  html.e3-dark .drawer { background-color: #f0f0f0 !important; }
+  html.e3-dark img, html.e3-dark video, html.e3-dark canvas,
+  html.e3-dark iframe, html.e3-dark embed, html.e3-dark object {
     filter: invert(111%) hue-rotate(180deg) !important;
   }
+  html.e3-dark .icon, html.e3-dark .fa, html.e3-dark [class*="fa-"] { filter: none !important; }
+  html.e3-dark .activityiconcontainer img, html.e3-dark .activityicon,
+  html.e3-dark .courseicon img, html.e3-dark .icon.activityicon { filter: none !important; }
+  html.e3-dark * { text-shadow: none !important; }
+  html.e3-dark #e3-quick-panel, html.e3-dark .e3-panel-item,
+  html.e3-dark .e3-panel-header, html.e3-dark .e3-panel-loading,
+  html.e3-dark .e3-panel-empty { filter: invert(111%) hue-rotate(180deg) !important; }
+  html.e3-dark button[style*="position: fixed"][style*="bottom: 20px"] { filter: invert(111%) hue-rotate(180deg) !important; }
+  html.e3-dark ::-webkit-scrollbar { width: 8px; }
+  html.e3-dark ::-webkit-scrollbar-track { background: #222; }
+  html.e3-dark ::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
+  `;
 
-  /* Text-based icons: don't re-invert */
-  .icon, .fa, [class*="fa-"] {
-    filter: none !important;
-  }
-
-  /* Activity icons: exclude from img re-invert so they follow the global invert */
-  .activityiconcontainer img, .activityicon,
-  .courseicon img, .icon.activityicon {
-    filter: none !important;
-  }
-
-  /* Reduce harsh shadows */
-  * { text-shadow: none !important; }
-
-  /* Our own injected elements — re-invert to keep original colors */
-  #e3-quick-panel, .e3-panel-item, .e3-panel-header,
-  .e3-panel-loading, .e3-panel-empty {
-    filter: invert(111%) hue-rotate(180deg) !important;
-  }
-  button[style*="position: fixed"][style*="bottom: 20px"] {
-    filter: invert(111%) hue-rotate(180deg) !important;
-  }
-
-  /* Scrollbar */
-  ::-webkit-scrollbar { width: 8px; }
-  ::-webkit-scrollbar-track { background: #222; }
-  ::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
-}
-`;
+  const style = document.createElement('style');
+  style.id = 'e3-dark-mode';
+  style.textContent = DARK_CSS;
   document.head.appendChild(style);
+
+  // Apply based on setting
+  async function applyMode() {
+    const mode = await darkModeStorage.getValue();
+    const isDark = mode === 'dark'
+      || (mode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.classList.toggle('e3-dark', isDark);
+  }
+
+  applyMode();
+
+  // Listen for system theme changes (for auto mode)
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyMode);
+
+  // Listen for storage changes (user toggles in popup)
+  darkModeStorage.watch(applyMode);
 }

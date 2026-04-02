@@ -4,14 +4,23 @@ import { AssignmentList } from '@/components/AssignmentList';
 import { CourseList } from '@/components/CourseList';
 import { Button } from '@/components/ui/Button';
 import { sendMessage } from '@/lib/messages';
+import { darkModeStorage } from '@/lib/storage';
 
 export default function App() {
   const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
   const [fullname, setFullname] = useState('');
+  const [darkMode, setDarkMode] = useState<'auto' | 'dark' | 'light'>('auto');
 
   useEffect(() => {
     checkAuth();
+    darkModeStorage.getValue().then(setDarkMode);
   }, []);
+
+  const cycleDarkMode = async () => {
+    const next = darkMode === 'auto' ? 'dark' : darkMode === 'dark' ? 'light' : 'auto';
+    setDarkMode(next);
+    await darkModeStorage.setValue(next);
+  };
 
   const checkAuth = async () => {
     try {
@@ -70,6 +79,9 @@ export default function App() {
           <p className="text-xs text-gray-400">{fullname}</p>
         </div>
         <div className="flex gap-1.5">
+          <Button variant="ghost" size="sm" onClick={cycleDarkMode} title={`Dark mode: ${darkMode}`}>
+            {darkMode === 'dark' ? 'Dark' : darkMode === 'light' ? 'Light' : 'Auto'}
+          </Button>
           <Button variant="ghost" size="sm" onClick={openSidePanel}>
             展開
           </Button>

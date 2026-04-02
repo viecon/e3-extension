@@ -36,3 +36,8 @@ export const settingsStorage = storage.defineItem<{
 export const authModeStorage = storage.defineItem<'session' | 'token'>('local:authMode', {
   fallback: 'session',
 });
+
+// Dark mode: 'auto' (follow system), 'dark', 'light'
+export const darkModeStorage = storage.defineItem<'auto' | 'dark' | 'light'>('local:darkMode', {
+  fallback: 'auto',
+});
