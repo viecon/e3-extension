@@ -3,6 +3,34 @@
 @tailwind utilities;
 
 body {
-  @apply bg-e3-bg text-gray-800;
+  @apply bg-e3-bg text-gray-800 dark:bg-gray-900 dark:text-gray-200;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Dark mode overrides for common patterns */
+@media (prefers-color-scheme: dark) {
+  .bg-gray-50 { background-color: rgb(31 41 55) !important; }
+  .bg-blue-50\/50 { background-color: rgb(30 58 95 / 0.3) !important; }
+  .bg-blue-50 { background-color: rgb(30 58 95 / 0.3) !important; }
+  .border-gray-200 { border-color: rgb(55 65 81) !important; }
+  .border-gray-100 { border-color: rgb(55 65 81) !important; }
+  .text-gray-800 { color: rgb(229 231 235) !important; }
+  .text-gray-700 { color: rgb(209 213 219) !important; }
+  .text-gray-600 { color: rgb(156 163 175) !important; }
+  .text-gray-500 { color: rgb(156 163 175) !important; }
+  .text-gray-400 { color: rgb(107 114 128) !important; }
+  .text-e3-primary { color: rgb(147 197 253) !important; }
+  .hover\:bg-gray-50:hover { background-color: rgb(31 41 55) !important; }
+  .hover\:bg-gray-100:hover { background-color: rgb(55 65 81) !important; }
+  .bg-e3-bg { background-color: rgb(17 24 39) !important; }
+  .bg-e3-card { background-color: rgb(31 41 55) !important; }
+  .border-l-gray-300 { border-left-color: rgb(75 85 99) !important; }
+  .bg-red-50 { background-color: rgb(127 29 29 / 0.2) !important; }
+
+  /* Login form inputs */
+  input[type="text"], input[type="password"] {
+    background-color: rgb(31 41 55) !important;
+    border-color: rgb(55 65 81) !important;
+    color: rgb(229 231 235) !important;
+  }
 }

@@ -5,6 +5,7 @@ export default {
     './entrypoints/**/*.{ts,tsx,html}',
     './components/**/*.{ts,tsx}',
   ],
+  darkMode: 'media',
   theme: {
     extend: {
       colors: {

@@ -19,9 +19,9 @@ export function Button({
 
   const variants = {
     primary: 'bg-e3-accent text-white hover:bg-e3-primary',
-    secondary: 'bg-gray-100 text-gray-700 hover:bg-gray-200',
+    secondary: 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600',
     danger: 'bg-e3-danger text-white hover:bg-red-600',
-    ghost: 'text-gray-600 hover:bg-gray-100',
+    ghost: 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700',
   };
 
   const sizes = {
