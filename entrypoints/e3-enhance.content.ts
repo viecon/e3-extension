@@ -532,9 +532,15 @@ function injectDarkMode() {
     filter: invert(111%) hue-rotate(180deg) !important;
   }
 
-  /* Icons: don't re-invert text-based icons */
+  /* Text-based icons: don't re-invert */
   .icon, .fa, [class*="fa-"] {
     filter: none !important;
+  }
+
+  /* Activity icons (img): re-inverted but too dark — boost brightness */
+  .activityiconcontainer img, .activityicon,
+  .courseicon img, .icon.activityicon {
+    filter: invert(111%) hue-rotate(180deg) brightness(1.8) !important;
   }
 
   /* Reduce harsh shadows */
