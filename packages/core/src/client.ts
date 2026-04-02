@@ -1,6 +1,8 @@
 import type { MoodleError } from './types.js';
+import { flattenParams } from './utils.js';
+import { DEFAULT_BASE_URL } from './constants.js';
 
-const BASE_URL = 'https://e3p.nycu.edu.tw';
+const BASE_URL = DEFAULT_BASE_URL;
 const REST_PATH = '/webservice/rest/server.php';
 const AJAX_PATH = '/lib/ajax/service.php';
 
@@ -67,7 +69,7 @@ export class MoodleClient {
     url.searchParams.set('wsfunction', wsfunction);
 
     const body = new URLSearchParams();
-    this.flattenParams(params, body);
+    flattenParams(params, body);
 
     const res = await fetch(url.toString(), {
       method: 'POST',
@@ -227,6 +229,9 @@ export class MoodleClient {
     }
 
     const result = Array.isArray(data) ? data[0] : data;
+    if (!result || result.itemid === undefined) {
+      throw new MoodleApiError('upload_error', 'Upload returned empty or malformed response');
+    }
     return { itemid: result.itemid, filename: result.filename };
   }
 
@@ -239,9 +244,16 @@ export class MoodleClient {
       this.sesskey = await this.fetchSesskey();
     }
 
-    // Convert file to base64
+    // Convert file to base64 (works in both Node and browser)
     const buffer = await file.arrayBuffer();
-    const base64 = Buffer.from(buffer).toString('base64');
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const base64 = typeof btoa === 'function'
+      ? btoa(binary)
+      : Buffer.from(buffer).toString('base64');
 
     const result = await this.ajaxCall<{
       itemid: number;
@@ -303,30 +315,4 @@ export class MoodleClient {
     return this.baseUrl;
   }
 
-  /**
-   * Flatten nested params for Moodle's expected format.
-   */
-  private flattenParams(
-    params: Record<string, unknown>,
-    body: URLSearchParams,
-    prefix = '',
-  ): void {
-    for (const [key, value] of Object.entries(params)) {
-      const fullKey = prefix ? `${prefix}[${key}]` : key;
-
-      if (Array.isArray(value)) {
-        value.forEach((item, index) => {
-          if (typeof item === 'object' && item !== null) {
-            this.flattenParams(item as Record<string, unknown>, body, `${fullKey}[${index}]`);
-          } else {
-            body.append(`${fullKey}[${index}]`, String(item));
-          }
-        });
-      } else if (typeof value === 'object' && value !== null) {
-        this.flattenParams(value as Record<string, unknown>, body, fullKey);
-      } else if (value !== undefined && value !== null) {
-        body.append(fullKey, String(value));
-      }
-    }
-  }
 }

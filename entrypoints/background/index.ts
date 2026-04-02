@@ -371,7 +371,7 @@ export default defineBackground(() => {
   onMessage('exportForCli', async () => {
     try {
       const cookie = await chrome.cookies.get({
-        url: 'https://e3p.nycu.edu.tw',
+        url: BASE_URL,
         name: 'MoodleSession',
       });
       if (cookie) {
