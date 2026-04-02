@@ -50,7 +50,7 @@ async function extractAndSaveSession() {
     }
     if (!userid) {
       const m = text.match(/"userid"\s*:\s*(\d+)/);
-      if (m) userid = Number(m[1]);
+      if (m) { const n = Number(m[1]); if (!isNaN(n)) userid = n; }
     }
     if (!fullname) {
       const m = text.match(/"fullname"\s*:\s*"([^"]+)"/);
