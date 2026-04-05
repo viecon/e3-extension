@@ -2,7 +2,7 @@
 
 NYCU E3 LMS 瀏覽器 Extension — Chrome / Firefox / Zen Browser。
 
-> 從 [viecon/e3-assistant](https://github.com/viecon/e3-assistant) 拆分而來。
+> 從 [viecon/e3-cli](https://github.com/viecon/e3-cli) 拆分而來。
 
 ## 功能
 
