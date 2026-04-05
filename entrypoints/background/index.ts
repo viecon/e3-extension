@@ -11,7 +11,7 @@ import {
   checkSession,
   BASE_URL,
 } from '@/lib/moodle';
-import { SECONDS_PER_DAY } from '@e3/core';
+const SECONDS_PER_DAY = 86400;
 
 /**
  * Call Moodle API.

@@ -1,15 +1,7 @@
 import { defineConfig } from 'wxt';
-import { resolve } from 'node:path';
 
 export default defineConfig({
   modules: ['@wxt-dev/module-react'],
-  vite: () => ({
-    resolve: {
-      alias: {
-        '@e3/core': resolve(__dirname, '../core/src/index.ts'),
-      },
-    },
-  }),
   manifest: {
     name: 'E3 助手 - NYCU E3 LMS Assistant',
     description: '讓 NYCU E3 更好用：作業追蹤、批次下載、批次上傳',

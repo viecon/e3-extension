@@ -6,10 +6,46 @@
  * 改為從已登入的 E3 頁面擷取 sesskey，搭配瀏覽器自動帶的 session cookie 使用。
  */
 
-import { DEFAULT_BASE_URL, MoodleApiError, flattenParams } from '@e3/core';
+export const BASE_URL = 'https://e3p.nycu.edu.tw';
 
-export const BASE_URL = DEFAULT_BASE_URL;
-export { MoodleApiError };
+export class MoodleApiError extends Error {
+  constructor(
+    public errorcode: string,
+    message: string,
+    public exception?: string,
+  ) {
+    super(message);
+    this.name = 'MoodleApiError';
+  }
+}
+
+/**
+ * Flatten nested params for Moodle API's expected format.
+ * e.g. { courseids: [1, 2] } → courseids[0]=1&courseids[1]=2
+ */
+function flattenParams(
+  params: Record<string, unknown>,
+  body: URLSearchParams,
+  prefix = '',
+): void {
+  for (const [key, value] of Object.entries(params)) {
+    const fullKey = prefix ? `${prefix}[${key}]` : key;
+
+    if (Array.isArray(value)) {
+      value.forEach((item, index) => {
+        if (typeof item === 'object' && item !== null) {
+          flattenParams(item as Record<string, unknown>, body, `${fullKey}[${index}]`);
+        } else {
+          body.append(`${fullKey}[${index}]`, String(item));
+        }
+      });
+    } else if (typeof value === 'object' && value !== null) {
+      flattenParams(value as Record<string, unknown>, body, fullKey);
+    } else if (value !== undefined && value !== null) {
+      body.append(fullKey, String(value));
+    }
+  }
+}
 
 /**
  * 呼叫 Moodle AJAX API（session-based，不需 token）
