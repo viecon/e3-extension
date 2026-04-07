@@ -12,7 +12,7 @@ export default defineContentScript({
     // 1. 自動擷取 sesskey 並等待存入 (後續功能需要 auth)
     await extractAndSaveSession();
 
-    // 2. Command Palette (Ctrl+.)
+    // 2. Command Palette (Ctrl+`)
     initCommandPalette();
 
     // 3. 浮動按鈕
@@ -494,7 +494,7 @@ async function addDeadlineBanner() {
 }
 
 /**
- * Command Palette — Ctrl+. 快速導航
+ * Command Palette — Ctrl+` 快速導航
  */
 function initCommandPalette() {
   let overlay: HTMLDivElement | null = null;
@@ -788,9 +788,9 @@ function initCommandPalette() {
     overlay = null;
   }
 
-  // Listen for Ctrl+. (period) — no conflict with browser built-in shortcuts
+  // Listen for Ctrl+` — no conflict with browser built-in shortcuts
   document.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === '.') {
+    if ((e.ctrlKey || e.metaKey) && e.key === '`') {
       e.preventDefault();
       e.stopPropagation();
       if (overlay) close(); else open();
