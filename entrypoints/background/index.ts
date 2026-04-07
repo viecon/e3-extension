@@ -11,6 +11,15 @@ import {
   checkSession,
   BASE_URL,
 } from '@/lib/moodle';
+
+// MV2/MV3 compat: browser.action (MV3) or browser.browserAction (MV2)
+// Use try-catch because webextension-polyfill may throw on access when chrome.action is undefined
+function getActionApi() {
+  try { if (browser.action?.setBadgeText) return browser.action; } catch {}
+  try { if (browser.browserAction?.setBadgeText) return browser.browserAction; } catch {}
+  return null;
+}
+const actionApi = getActionApi();
 const SECONDS_PER_DAY = 86400;
 
 /**
@@ -78,6 +87,7 @@ export default defineBackground(() => {
         username: data.username ?? '',
       });
     }
+
   });
 
   onMessage('loginWithToken', async ({ data }) => {
@@ -217,7 +227,7 @@ export default defineBackground(() => {
       const files = await scrapeCourseFiles(data.courseid, data.typeFilter) as { filename: string; fileurl: string }[];
       let count = 0;
       for (const file of files) {
-        await chrome.downloads.download({
+        await browser.downloads.download({
           url: file.fileurl,
           filename: file.filename,
         });
@@ -306,28 +316,32 @@ export default defineBackground(() => {
         courseids = courses.courses.map(c => c.id);
       }
 
-      // Get news forums
-      const forums = await apiCall<{ id: number; course: number; type: string; name: string }[]>(
-        'mod_forum_get_forums_by_courses', { courseids },
-      );
-      const newsForums = forums.filter(f => f.type === 'news');
-
       const allNews: { subject: string; message: string; author: string; time: number }[] = [];
-      const since = Math.floor(Date.now() / 1000) - 14 * SECONDS_PER_DAY;
+      const since = Math.floor(Date.now() / 1000) - 30 * SECONDS_PER_DAY;
 
-      for (const forum of newsForums) {
-        const result = await apiCall<{ discussions: { subject: string; message: string; userfullname: string; timemodified: number }[] }>(
-          'mod_forum_get_forum_discussions', { forumid: forum.id, sortorder: -1, page: 0, perpage: 10 },
-        );
-        for (const d of result.discussions) {
-          if (d.timemodified < since) continue;
-          allNews.push({
-            subject: d.subject,
-            message: d.message,
-            author: d.userfullname,
-            time: d.timemodified,
-          });
+      // Forum API requires token with full permissions — use REST directly, skip AJAX fallback
+      const token = await tokenStorage.getValue();
+      if (token) {
+        try {
+          const forums = await moodleRestCall<{ id: number; course: number; type: string; name: string }[]>(
+            token, 'mod_forum_get_forums_by_courses', { courseids },
+          );
+          const newsForums = forums.filter(f => f.type === 'news');
+
+          for (const forum of newsForums) {
+            const result = await moodleRestCall<{ discussions: { subject: string; message: string; userfullname: string; timemodified: number }[] }>(
+              token, 'mod_forum_get_forum_discussions', { forumid: forum.id, sortorder: -1, page: 0, perpage: 10 },
+            );
+            for (const d of result.discussions) {
+              if (d.timemodified < since) continue;
+              allNews.push({ subject: d.subject, message: d.message, author: d.userfullname, time: d.timemodified });
+            }
+          }
+        } catch (err) {
+          console.warn('[E3 助手] Forum API failed:', err);
         }
+      } else {
+        console.warn('[E3 助手] 公告需要 Token 登入。請在 Extension 設定中輸入 Token。');
       }
 
       allNews.sort((a, b) => b.time - a.time);
@@ -371,7 +385,7 @@ export default defineBackground(() => {
   // === CLI Export ===
   onMessage('exportForCli', async () => {
     try {
-      const cookie = await chrome.cookies.get({
+      const cookie = await browser.cookies.get({
         url: BASE_URL,
         name: 'MoodleSession',
       });
@@ -402,18 +416,18 @@ export default defineBackground(() => {
         e => e.action?.actionable && e.modulename === 'assign',
       ).length;
 
-      chrome.action.setBadgeText({ text: count > 0 ? String(count) : '' });
-      chrome.action.setBadgeBackgroundColor({ color: count > 0 ? '#e74c3c' : '#4a90d9' });
+      actionApi?.setBadgeText({ text: count > 0 ? String(count) : '' });
+      actionApi?.setBadgeBackgroundColor({ color: count > 0 ? '#e74c3c' : '#4a90d9' });
     } catch {
-      chrome.action.setBadgeText({ text: '' });
+      actionApi?.setBadgeText({ text: '' });
     }
   }
 
   // Update badge on startup and periodically
   updateBadge();
-  chrome.alarms.create('checkDeadlines', { periodInMinutes: 30 });
+  browser.alarms.create('checkDeadlines', { periodInMinutes: 30 });
 
-  chrome.alarms.onAlarm.addListener(async (alarm) => {
+  browser.alarms.onAlarm.addListener(async (alarm) => {
     if (alarm.name !== 'checkDeadlines') return;
 
     const sesskey = await sesskeyStorage.getValue();

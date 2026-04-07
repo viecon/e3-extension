@@ -52,11 +52,9 @@ export default function App() {
   };
 
   const openSidePanel = () => {
-    if (chrome.sidePanel) {
-      chrome.windows.getCurrent().then(w => {
-        if (w.id) chrome.sidePanel.open({ windowId: w.id });
-      });
-    }
+    try {
+      browser.sidebarAction?.open();
+    } catch {}
   };
 
   if (loggedIn === null) {

@@ -48,7 +48,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
   };
 
   const openE3 = () => {
-    chrome.tabs.create({ url: `${BASE_URL}/my/` });
+    browser.tabs.create({ url: `${BASE_URL}/my/` });
   };
 
   return (

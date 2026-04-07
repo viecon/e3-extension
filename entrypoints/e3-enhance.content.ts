@@ -12,7 +12,7 @@ export default defineContentScript({
     // 1. 自動擷取 sesskey 並等待存入 (後續功能需要 auth)
     await extractAndSaveSession();
 
-    // 2. Command Palette (Ctrl+K)
+    // 2. Command Palette (Ctrl+.)
     initCommandPalette();
 
     // 3. 浮動按鈕
@@ -174,7 +174,10 @@ function createQuickPanel(): HTMLDivElement {
   document.head.appendChild(style);
 
   // Loading state
-  panel.innerHTML = '<div class="e3-panel-loading">載入中...</div>';
+  const loadingDiv = document.createElement('div');
+  loadingDiv.className = 'e3-panel-loading';
+  loadingDiv.textContent = '載入中...';
+  panel.appendChild(loadingDiv);
 
   // Load data
   loadPanelData(panel);
@@ -380,7 +383,9 @@ function enhanceAssignmentPage() {
     font-size: 13px;
     color: #1e3a5f;
   `;
-  tip.innerHTML = '<strong>E3 助手</strong> — 可以用 Side Panel 的上傳功能一次上傳多個檔案';
+  const strong = document.createElement('strong');
+  strong.textContent = 'E3 助手';
+  tip.append(strong, ' — 可以用 Side Panel 的上傳功能一次上傳多個檔案');
   submissionStatus.parentNode?.insertBefore(tip, submissionStatus.nextSibling);
 }
 
@@ -489,7 +494,7 @@ async function addDeadlineBanner() {
 }
 
 /**
- * Command Palette — Ctrl+K 快速導航
+ * Command Palette — Ctrl+. 快速導航
  */
 function initCommandPalette() {
   let overlay: HTMLDivElement | null = null;
@@ -628,7 +633,17 @@ function initCommandPalette() {
     // Input
     const inputWrap = document.createElement('div');
     inputWrap.className = 'e3-cmd-input-wrap';
-    inputWrap.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>';
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '2');
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', '11'); circle.setAttribute('cy', '11'); circle.setAttribute('r', '8');
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', 'm21 21-4.35-4.35');
+    svg.append(circle, path);
+    inputWrap.appendChild(svg);
 
     const input = document.createElement('input');
     input.className = 'e3-cmd-input';
@@ -644,12 +659,19 @@ function initCommandPalette() {
     // Results
     const results = document.createElement('div');
     results.className = 'e3-cmd-results';
-    results.innerHTML = '<div class="e3-cmd-empty">載入中...</div>';
+    const resultsLoading = document.createElement('div');
+    resultsLoading.className = 'e3-cmd-empty';
+    resultsLoading.textContent = '載入中...';
+    results.appendChild(resultsLoading);
 
     // Footer
     const footer = document.createElement('div');
     footer.className = 'e3-cmd-footer';
-    footer.innerHTML = '<span>↑↓ 移動</span><span>Enter 開啟</span><span>Esc 關閉</span>';
+    for (const text of ['↑↓ 移動', 'Enter 開啟', 'Esc 關閉']) {
+      const span = document.createElement('span');
+      span.textContent = text;
+      footer.appendChild(span);
+    }
 
     box.append(inputWrap, results, footer);
     overlay.appendChild(box);
@@ -766,9 +788,9 @@ function initCommandPalette() {
     overlay = null;
   }
 
-  // Listen for Ctrl+K
+  // Listen for Ctrl+. (period) — no conflict with browser built-in shortcuts
   document.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'K') {
+    if ((e.ctrlKey || e.metaKey) && e.key === '.') {
       e.preventDefault();
       e.stopPropagation();
       if (overlay) close(); else open();
