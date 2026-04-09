@@ -51,8 +51,15 @@ export default function App() {
     setLoggedIn(false);
   };
 
-  const openSidePanel = () => {
+  const openSidePanel = async () => {
     try {
+      // Chrome MV3: chrome.sidePanel API
+      if (typeof chrome !== 'undefined' && chrome.sidePanel?.open) {
+        const currentWindow = await chrome.windows.getCurrent();
+        await chrome.sidePanel.open({ windowId: currentWindow.id });
+        return;
+      }
+      // Firefox: sidebarAction API
       browser.sidebarAction?.open();
     } catch {}
   };

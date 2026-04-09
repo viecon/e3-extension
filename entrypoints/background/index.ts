@@ -328,10 +328,14 @@ export default defineBackground(() => {
           );
           const newsForums = forums.filter(f => f.type === 'news');
 
-          for (const forum of newsForums) {
-            const result = await moodleRestCall<{ discussions: { subject: string; message: string; userfullname: string; timemodified: number }[] }>(
-              token, 'mod_forum_get_forum_discussions', { forumid: forum.id, sortorder: -1, page: 0, perpage: 10 },
-            );
+          const forumResults = await Promise.all(
+            newsForums.map(forum =>
+              moodleRestCall<{ discussions: { subject: string; message: string; userfullname: string; timemodified: number }[] }>(
+                token, 'mod_forum_get_forum_discussions', { forumid: forum.id, sortorder: -1, page: 0, perpage: 10 },
+              ).catch(() => ({ discussions: [] })),
+            ),
+          );
+          for (const result of forumResults) {
             for (const d of result.discussions) {
               if (d.timemodified < since) continue;
               allNews.push({ subject: d.subject, message: d.message, author: d.userfullname, time: d.timemodified });

@@ -17,6 +17,7 @@ interface AssignmentItem {
   courseShortname: string;
   name: string;
   duedate: number;
+  intro: string;
   submissionStatus: string;
   isOverdue: boolean;
   url?: string;

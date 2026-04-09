@@ -1,13 +1,12 @@
 import { sendMessage } from '@/lib/messages';
+import type { AssignmentItem, CourseItem, NewsItem } from '@/lib/messages';
 import { BASE_URL } from '@/lib/moodle';
-import { darkModeStorage } from '@/lib/storage';
 
 export default defineContentScript({
   matches: ['https://e3p.nycu.edu.tw/*'],
   runAt: 'document_idle',
   async main() {
-    // 0. 注入 E3 Dark Mode（跟系統 dark mode 連動）
-    injectDarkMode();
+    // Dark mode is handled by e3-darkmode.content.ts (document_start)
 
     // 1. 自動擷取 sesskey 並等待存入 (後續功能需要 auth)
     await extractAndSaveSession();
@@ -32,7 +31,7 @@ export default defineContentScript({
       enhanceAssignmentPage();
     }
 
-    // 5. 首頁截止日提醒 banner (需要 auth 所以放最後)
+    // 6. 首頁截止日提醒 banner (需要 auth 所以放最後)
     if (window.location.pathname === '/my/' || window.location.pathname === '/my') {
       addDeadlineBanner();
     }
@@ -192,20 +191,8 @@ async function loadPanelData(panel: HTMLDivElement) {
       sendMessage('getCourses', undefined),
     ]);
 
-    const assignments = assignResult.assignments as {
-      name: string;
-      courseShortname: string;
-      duedate: number;
-      isOverdue: boolean;
-      url?: string;
-    }[];
-
-    const courses = courseResult.courses as {
-      id: number;
-      shortname: string;
-      fullname: string;
-      viewurl: string;
-    }[];
+    const assignments = assignResult.assignments;
+    const courses = courseResult.courses;
 
     // Clear loading
     panel.textContent = '';
@@ -321,9 +308,9 @@ function addBatchDownloadButton(courseId: string) {
     downloadBtn.textContent = '下載中...';
     downloadBtn.style.opacity = '0.6';
     try {
-      await sendMessage('downloadCourseFiles', { courseid: Number(courseId) });
-      downloadBtn.textContent = '下載完成';
-      downloadBtn.style.background = '#27ae60';
+      const { count } = await sendMessage('downloadCourseFiles', { courseid: Number(courseId) });
+      downloadBtn.textContent = count > 0 ? `已下載 ${count} 個檔案` : '沒有找到檔案';
+      downloadBtn.style.background = count > 0 ? '#27ae60' : '#f39c12';
     } catch {
       downloadBtn.textContent = '下載失敗';
       downloadBtn.style.background = '#e74c3c';
@@ -395,13 +382,7 @@ function enhanceAssignmentPage() {
 async function addDeadlineBanner() {
   try {
     const result = await sendMessage('getPendingAssignments', undefined);
-    const assignments = result.assignments as {
-      name: string;
-      courseShortname: string;
-      duedate: number;
-      isOverdue: boolean;
-      url?: string;
-    }[];
+    const assignments = result.assignments;
 
     if (assignments.length === 0) return;
 
@@ -560,9 +541,15 @@ function initCommandPalette() {
   interface CmdItem {
     title: string;
     sub?: string;
+    content?: string; // searchable body text (not displayed by default)
     icon: string;
     iconBg: string;
+    group: 'nav' | 'course' | 'assign' | 'news';
     action: () => void;
+  }
+
+  function stripHtmlTags(html: string): string {
+    return html.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
   }
 
   let allItems: CmdItem[] = [];
@@ -574,16 +561,18 @@ function initCommandPalette() {
 
     // Static navigation items
     items.push(
-      { title: 'E3 首頁', sub: '焦點綜覽', icon: 'H', iconBg: '#3b82f6', action: () => nav('/my/') },
-      { title: '行事曆', sub: 'Calendar', icon: 'C', iconBg: '#8b5cf6', action: () => nav('/calendar/view.php') },
-      { title: '成績總覽', sub: 'Grades', icon: 'G', iconBg: '#10b981', action: () => nav('/grade/report/overview/index.php') },
+      { title: 'E3 首頁', sub: '焦點綜覽', icon: 'H', iconBg: '#3b82f6', group: 'nav', action: () => nav('/my/') },
+      { title: '行事曆', sub: 'Calendar', icon: 'C', iconBg: '#8b5cf6', group: 'nav', action: () => nav('/calendar/view.php') },
+      { title: '成績總覽', sub: 'Grades', icon: 'G', iconBg: '#10b981', group: 'nav', action: () => nav('/grade/report/overview/index.php') },
+      { title: '通知', sub: 'Notifications', icon: 'N', iconBg: '#6366f1', group: 'nav', action: () => nav('/message/output/popup/notifications.php') },
     );
 
-    // Load courses + assignments
+    // Load courses + assignments + news in parallel
     try {
-      const [courseResult, assignResult] = await Promise.all([
+      const [courseResult, assignResult, newsResult] = await Promise.all([
         sendMessage('getCourses', undefined),
         sendMessage('getPendingAssignments', undefined),
+        sendMessage('getNews', {}).catch(() => ({ news: [] })),
       ]);
 
       for (const c of courseResult.courses) {
@@ -592,6 +581,7 @@ function initCommandPalette() {
           sub: c.shortname,
           icon: 'C',
           iconBg: '#0ea5e9',
+          group: 'course',
           action: () => nav(`/course/view.php?id=${c.id}`),
         });
       }
@@ -601,9 +591,24 @@ function initCommandPalette() {
         items.push({
           title: a.name,
           sub: `${a.courseShortname}${due ? ' · ' + due : ''}`,
+          content: a.intro ? stripHtmlTags(a.intro) : undefined,
           icon: 'A',
           iconBg: a.isOverdue ? '#ef4444' : '#f59e0b',
+          group: 'assign',
           action: () => nav(`/mod/assign/view.php?id=${a.cmid}`),
+        });
+      }
+
+      for (const n of newsResult.news) {
+        const date = new Date(n.time * 1000).toLocaleDateString('zh-TW', { month: 'short', day: 'numeric' });
+        items.push({
+          title: n.subject,
+          sub: `${n.author} · ${date}`,
+          content: stripHtmlTags(n.message),
+          icon: 'N',
+          iconBg: '#ec4899',
+          group: 'news',
+          action: () => nav('/my/'), // Navigate to homepage (news has no direct URL)
         });
       }
     } catch {
@@ -686,16 +691,20 @@ function initCommandPalette() {
       render(results, items);
     });
 
-    // Search
+    // Search — matches title, sub, and content (full-text)
     input.addEventListener('input', () => {
       const q = input.value.toLowerCase().trim();
-      const filtered = q
-        ? allItems.filter(item =>
-            item.title.toLowerCase().includes(q) ||
-            (item.sub?.toLowerCase().includes(q) ?? false))
-        : allItems;
+      if (!q) {
+        activeIdx = 0;
+        render(results, allItems, '');
+        return;
+      }
+      const filtered = allItems.filter(item =>
+        item.title.toLowerCase().includes(q) ||
+        (item.sub?.toLowerCase().includes(q) ?? false) ||
+        (item.content?.toLowerCase().includes(q) ?? false));
       activeIdx = 0;
-      render(results, filtered);
+      render(results, filtered, q);
     });
 
     // Keyboard nav
@@ -719,27 +728,37 @@ function initCommandPalette() {
     });
   }
 
-  function render(container: HTMLElement, items: CmdItem[]) {
+  const GROUP_LABELS: Record<string, string> = {
+    nav: '快速導航',
+    course: '課程',
+    assign: '作業',
+    news: '公告',
+  };
+
+  function render(container: HTMLElement, items: CmdItem[], query = '') {
     container.textContent = '';
     if (items.length === 0) {
       const empty = document.createElement('div');
       empty.className = 'e3-cmd-empty';
-      empty.textContent = '找不到結果';
+      empty.textContent = query ? '找不到結果' : '載入中...';
       container.appendChild(empty);
       return;
     }
 
-    // Group: navigation, courses, assignments
+    // Group items
     const groups: Record<string, CmdItem[]> = {};
     for (const item of items) {
-      const group = item.icon === 'A' ? '作業' : item.icon === 'C' && item.sub !== 'Calendar' ? '課程' : '快速導航';
-      (groups[group] ??= []).push(item);
+      (groups[item.group] ??= []).push(item);
     }
 
-    for (const [label, groupItems] of Object.entries(groups)) {
+    // Render in order: nav, course, assign, news
+    for (const groupKey of ['nav', 'course', 'assign', 'news']) {
+      const groupItems = groups[groupKey];
+      if (!groupItems?.length) continue;
+
       const groupEl = document.createElement('div');
       groupEl.className = 'e3-cmd-group';
-      groupEl.textContent = label;
+      groupEl.textContent = GROUP_LABELS[groupKey] ?? groupKey;
       container.appendChild(groupEl);
 
       for (const item of groupItems) {
@@ -765,6 +784,25 @@ function initCommandPalette() {
           sub.className = 'e3-cmd-item-sub';
           sub.textContent = item.sub;
           text.appendChild(sub);
+        }
+
+        // Show content snippet when searching and match is in content
+        if (query && item.content) {
+          const lowerContent = item.content.toLowerCase();
+          const matchIdx = lowerContent.indexOf(query.toLowerCase());
+          if (matchIdx >= 0) {
+            const snippet = document.createElement('div');
+            snippet.className = 'e3-cmd-item-sub';
+            snippet.style.marginTop = '2px';
+            snippet.style.color = '#94a3b8';
+            // Show context around the match
+            const start = Math.max(0, matchIdx - 20);
+            const end = Math.min(item.content.length, matchIdx + query.length + 60);
+            const prefix = start > 0 ? '…' : '';
+            const suffix = end < item.content.length ? '…' : '';
+            snippet.textContent = `${prefix}${item.content.slice(start, end)}${suffix}`;
+            text.appendChild(snippet);
+          }
         }
 
         el.append(icon, text);
@@ -798,67 +836,3 @@ function initCommandPalette() {
   });
 }
 
-/**
- * 注入 E3 網站 Dark Mode CSS
- * 支援三種模式：auto (跟系統), dark (強制深色), light (強制淺色)
- */
-async function injectDarkMode() {
-  const DARK_CSS = `
-  html.e3-dark {
-    filter: invert(90%) hue-rotate(180deg);
-    background: #111 !important;
-  }
-  html.e3-dark body { background-color: #eee !important; }
-  html.e3-dark #page, html.e3-dark #page-wrapper, html.e3-dark #page-content,
-  html.e3-dark #region-main, html.e3-dark #region-main-box,
-  html.e3-dark .course-content, html.e3-dark [role="main"],
-  html.e3-dark .block, html.e3-dark .card, html.e3-dark .card-body,
-  html.e3-dark .card-header, html.e3-dark .card-footer,
-  html.e3-dark .dashboard-card-deck, html.e3-dark .block_myoverview,
-  html.e3-dark .section-summary, html.e3-dark .course-section-header,
-  html.e3-dark .container-fluid:not(.navbar .container-fluid) {
-    background-color: #fff !important;
-  }
-  html.e3-dark #page-footer { background-color: #f5f5f5 !important; }
-  html.e3-dark nav.navbar.bg-primary { background-color: #d4e6f9 !important; }
-  html.e3-dark nav.navbar .nav-link, html.e3-dark nav.navbar a { color: #1a3a5f !important; }
-  html.e3-dark .popover-region-container, html.e3-dark .popover-region-content-container { background-color: #fff !important; }
-  html.e3-dark .drawer { background-color: #f0f0f0 !important; }
-  html.e3-dark img, html.e3-dark video, html.e3-dark canvas,
-  html.e3-dark iframe, html.e3-dark embed, html.e3-dark object {
-    filter: invert(111%) hue-rotate(180deg) !important;
-  }
-  html.e3-dark .icon, html.e3-dark .fa, html.e3-dark [class*="fa-"] { filter: none !important; }
-  html.e3-dark .activityiconcontainer img, html.e3-dark .activityicon,
-  html.e3-dark .courseicon img, html.e3-dark .icon.activityicon { filter: none !important; }
-  html.e3-dark * { text-shadow: none !important; }
-  html.e3-dark #e3-quick-panel, html.e3-dark .e3-panel-item,
-  html.e3-dark .e3-panel-header, html.e3-dark .e3-panel-loading,
-  html.e3-dark .e3-panel-empty { filter: invert(111%) hue-rotate(180deg) !important; }
-  html.e3-dark button[style*="position: fixed"][style*="bottom: 20px"] { filter: invert(111%) hue-rotate(180deg) !important; }
-  html.e3-dark ::-webkit-scrollbar { width: 8px; }
-  html.e3-dark ::-webkit-scrollbar-track { background: #222; }
-  html.e3-dark ::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
-  `;
-
-  const style = document.createElement('style');
-  style.id = 'e3-dark-mode';
-  style.textContent = DARK_CSS;
-  document.head.appendChild(style);
-
-  // Apply based on setting
-  async function applyMode() {
-    const mode = await darkModeStorage.getValue();
-    const isDark = mode === 'dark'
-      || (mode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    document.documentElement.classList.toggle('e3-dark', isDark);
-  }
-
-  applyMode();
-
-  // Listen for system theme changes (for auto mode)
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyMode);
-
-  // Listen for storage changes (user toggles in popup)
-  darkModeStorage.watch(applyMode);
-}

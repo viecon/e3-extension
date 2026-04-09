@@ -4,12 +4,12 @@ import "wxt/browser";
 declare module "wxt/browser" {
   export type PublicPath =
     | "/background.js"
+    | "/content-scripts/e3-darkmode.js"
     | "/content-scripts/e3-enhance.js"
     | "/icon/128.png"
     | "/icon/16.png"
     | "/icon/32.png"
     | "/icon/48.png"
-    | "/icon/icon.svg"
     | "/popup.html"
     | "/sidepanel.html"
   type HtmlPublicPath = Extract<PublicPath, `${string}.html`>
