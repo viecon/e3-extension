@@ -2,3 +2,5 @@ node_modules/
 dist/
 .output/
 *.tsbuildinfo
+package-lock.json
+bun.lock
